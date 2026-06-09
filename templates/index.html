@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Testnet Sender</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        body { font-family: 'DM Sans', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .step-card { transition: all 0.25s ease; }
+        .step-card.active { border-color: rgb(52 211 153); box-shadow: 0 0 0 1px rgb(52 211 153 / 0.3); }
+        .step-card.done { border-color: rgb(52 211 153 / 0.5); }
+        .step-card.locked { opacity: 0.45; }
+        .step-card.locked .step-content { pointer-events: none; user-select: none; }
+        .step-card.done, .step-card.active { opacity: 1; }
+        .progress-fill { transition: width 0.4s ease; }
+        input:disabled, button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+    <div class="max-w-3xl mx-auto px-6 py-10">
+        <header class="mb-10">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-11 h-11 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-xl">
+                    <i class="fab fa-bitcoin"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold tracking-tight">Bitcoin Testnet Sender</h1>
+                    <p class="text-slate-400 text-sm">Step-by-step wallet load, sign, broadcast &amp; confirmation</p>
+                </div>
+            </div>
+            <div class="mt-6">
+                <div class="flex justify-between text-xs text-slate-500 mb-2">
+                    <span>Progress</span>
+                    <span id="progress-label">Step 1 of 5</span>
+                </div>
+                <div class="h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="progress-fill h-full bg-emerald-500 rounded-full" style="width: 20%"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Step 1: Load Wallet -->
+        <section id="step-1" class="step-card active bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-5">
+            <div class="flex items-start gap-4 mb-5">
+                <div id="badge-1" class="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-semibold text-sm shrink-0">1</div>
+                <div>
+                    <h2 class="text-lg font-semibold">Load your wallet</h2>
+                    <p class="text-slate-400 text-sm mt-1">Enter your private key (WIF) and derivation path. We'll fetch your balance and UTXOs from the testnet.</p>
+                </div>
+            </div>
+
+            <div class="step-content space-y-4 ml-12">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5">Private Key (WIF)</label>
+                    <div class="relative">
+                        <input id="private-key" type="password"
+                               value="cT6ZEeyc3LYuwh7gGVP6Wb7TNBzRHpNrtUYiCFsguRxkARVfqbxY"
+                               class="mono w-full p-3.5 pr-12 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                        <button type="button" onclick="toggleKeyVisibility()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                            <i id="key-eye" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5">Derivation Path</label>
+                    <input id="derivation-path" value="m/84'/1'/0'/0/0"
+                           class="mono w-full p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                    <p class="text-xs text-slate-500 mt-1.5">BIP84 testnet SegWit path. Use <code class="text-slate-400">m/0/0</code> for legacy single-key wallets.</p>
+                </div>
+                <button id="btn-load" onclick="loadWallet()"
+                        class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-wallet"></i> Load Wallet
+                </button>
+            </div>
+        </section>
+
+        <!-- Step 2: Wallet Overview -->
+        <section id="step-2" class="step-card locked bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-5">
+            <div class="flex items-start gap-4 mb-5">
+                <div id="badge-2" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center font-semibold text-sm shrink-0">2</div>
+                <div>
+                    <h2 class="text-lg font-semibold">Review balance &amp; UTXOs</h2>
+                    <p class="text-slate-400 text-sm mt-1">Your loaded address, confirmed balance, and spendable outputs.</p>
+                </div>
+            </div>
+
+            <div class="step-content">
+            <div id="wallet-overview" class="hidden ml-12 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <div class="text-xs text-slate-500 uppercase tracking-wide mb-1">Address</div>
+                        <div id="wallet-address" class="mono text-sm text-emerald-400 break-all"></div>
+                    </div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <div class="text-xs text-slate-500 uppercase tracking-wide mb-1">Balance</div>
+                        <div id="wallet-balance" class="text-2xl font-bold text-white"></div>
+                        <div id="wallet-balance-sat" class="text-xs text-slate-500 mt-1"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-slate-400">UTXOs (<span id="utxo-count">0</span>)</span>
+                    </div>
+                    <div id="utxo-list" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <div id="wallet-empty" class="ml-12 text-sm text-slate-500 italic">Load a wallet in Step 1 to see your funds.</div>
+            </div>
+        </section>
+
+        <!-- Step 3: Destination -->
+        <section id="step-3" class="step-card locked bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-5">
+            <div class="flex items-start gap-4 mb-5">
+                <div id="badge-3" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center font-semibold text-sm shrink-0">3</div>
+                <div>
+                    <h2 class="text-lg font-semibold">Set destination</h2>
+                    <p class="text-slate-400 text-sm mt-1">Choose where to send testnet bitcoin and how much.</p>
+                </div>
+            </div>
+
+            <div class="step-content ml-12 space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5">Recipient Address</label>
+                    <input id="to-address" value="tb1qerzrlxcfu24davlur5sqmgzzgsal6wusda40er" disabled
+                           class="mono w-full p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-slate-400 mb-1.5">Amount (tBTC)</label>
+                    <input id="amount" type="number" value="0.000001" step="0.00000001" min="0" disabled
+                           class="mono w-full p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-none focus:border-emerald-500">
+                    <p class="text-xs text-slate-500 mt-1.5">Network fee will be deducted from your UTXOs on top of this amount.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 4: Sign & Broadcast -->
+        <section id="step-4" class="step-card locked bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-5">
+            <div class="flex items-start gap-4 mb-5">
+                <div id="badge-4" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center font-semibold text-sm shrink-0">4</div>
+                <div>
+                    <h2 class="text-lg font-semibold">Sign &amp; broadcast</h2>
+                    <p class="text-slate-400 text-sm mt-1">Build, sign, and publish your transaction to the testnet.</p>
+                </div>
+            </div>
+
+            <div class="step-content ml-12">
+                <button id="btn-send" onclick="signAndBroadcast()" disabled
+                        class="w-full py-3.5 bg-orange-600 hover:bg-orange-500 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                    <i class="fas fa-paper-plane"></i> Sign &amp; Broadcast Transaction
+                </button>
+
+                <div id="tx-details" class="hidden mt-5 space-y-4">
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-4">
+                        <div class="text-xs text-slate-500 uppercase tracking-wide mb-2">What happened</div>
+                        <ul id="tx-actions" class="space-y-1.5 text-sm text-slate-300"></ul>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                            <div class="text-xs text-slate-500">From</div>
+                            <div id="tx-from" class="mono text-xs text-slate-300 break-all mt-1"></div>
+                        </div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                            <div class="text-xs text-slate-500">To</div>
+                            <div id="tx-to" class="mono text-xs text-slate-300 break-all mt-1"></div>
+                        </div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                            <div class="text-xs text-slate-500">Amount</div>
+                            <div id="tx-amount" class="font-medium mt-1"></div>
+                        </div>
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3">
+                            <div class="text-xs text-slate-500">Fee</div>
+                            <div id="tx-fee" class="font-medium mt-1"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm text-slate-400 mb-2">Inputs</div>
+                        <div id="tx-inputs" class="space-y-2"></div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-slate-400 mb-2">Outputs</div>
+                        <div id="tx-outputs" class="space-y-2"></div>
+                    </div>
+
+                    <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4">
+                        <div class="text-xs text-emerald-400 uppercase tracking-wide mb-1">Transaction ID</div>
+                        <a id="tx-link" href="#" target="_blank" rel="noopener"
+                           class="mono text-sm text-emerald-300 hover:text-emerald-200 underline break-all"></a>
+                        <p class="text-xs text-slate-500 mt-2">
+                            <i class="fas fa-external-link-alt mr-1"></i>
+                            Click to view on <a href="#" id="mempool-link-text" target="_blank" class="text-orange-400 hover:text-orange-300">mempool.space testnet</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 5: Confirmations -->
+        <section id="step-5" class="step-card locked bg-slate-900/80 border border-slate-700 rounded-2xl p-6 mb-5">
+            <div class="flex items-start gap-4 mb-5">
+                <div id="badge-5" class="w-9 h-9 rounded-full bg-slate-800 border border-slate-600 text-slate-400 flex items-center justify-center font-semibold text-sm shrink-0">5</div>
+                <div>
+                    <h2 class="text-lg font-semibold">Wait for confirmations</h2>
+                    <p class="text-slate-400 text-sm mt-1">Track your transaction until it reaches 10 confirmations on testnet.</p>
+                </div>
+            </div>
+
+            <div class="step-content">
+            <div id="confirmation-panel" class="hidden ml-12">
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <span id="conf-status" class="text-sm font-medium text-amber-400">
+                            <i class="fas fa-spinner fa-spin mr-2"></i>Waiting for first confirmation...
+                        </span>
+                        <span id="conf-count" class="mono text-sm text-slate-400">0 / 10</span>
+                    </div>
+                    <div class="h-3 bg-slate-800 rounded-full overflow-hidden mb-3">
+                        <div id="conf-bar" class="progress-fill h-full bg-amber-500 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <div id="conf-details" class="text-xs text-slate-500 space-y-1"></div>
+                </div>
+
+                <div id="conf-success" class="hidden mt-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-emerald-300 text-sm">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Transaction fully confirmed with 10+ confirmations. It is now deeply buried in the blockchain.
+                </div>
+            </div>
+
+            <div id="confirmation-empty" class="ml-12 text-sm text-slate-500 italic">Broadcast a transaction in Step 4 to start tracking confirmations.</div>
+            </div>
+        </section>
+
+        <!-- Activity Log -->
+        <section class="bg-slate-900/50 border border-slate-800 rounded-2xl p-5">
+            <h3 class="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
+                <i class="fas fa-terminal"></i> Activity Log
+            </h3>
+            <div id="log" class="mono text-xs bg-black/40 rounded-xl p-4 h-48 overflow-auto space-y-1"></div>
+        </section>
+    </div>
+
+    <script>
+        const REQUIRED_CONFIRMATIONS = 10;
+        let currentStep = 1;
+        let walletLoaded = false;
+        let currentTxid = null;
+        let confirmationTimer = null;
+
+        function addLog(msg, type = '') {
+            const log = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const colors = { success: 'text-emerald-400', error: 'text-red-400', info: 'text-sky-400' };
+            log.innerHTML += `<div class="${colors[type] || 'text-slate-400'}">[${time}] ${msg}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function setProgress(step) {
+            currentStep = step;
+            const pct = Math.min(100, (step / 5) * 100);
+            document.getElementById('progress-bar').style.width = pct + '%';
+            document.getElementById('progress-label').textContent = `Step ${Math.min(step, 5)} of 5`;
+        }
+
+        function setStepControls(n, enabled) {
+            const el = document.getElementById(`step-${n}`);
+            el.querySelectorAll('input, button, select, textarea').forEach(ctrl => {
+                ctrl.disabled = !enabled;
+            });
+        }
+
+        function unlockStep(n) {
+            const el = document.getElementById(`step-${n}`);
+            el.classList.remove('locked');
+            el.classList.add('active');
+            setStepControls(n, true);
+        }
+
+        function markStepDone(n) {
+            const card = document.getElementById(`step-${n}`);
+            const badge = document.getElementById(`badge-${n}`);
+            card.classList.remove('active', 'locked');
+            card.classList.add('done');
+            badge.innerHTML = '<i class="fas fa-check text-sm"></i>';
+            badge.className = 'w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center shrink-0';
+        }
+
+        function toggleKeyVisibility() {
+            const input = document.getElementById('private-key');
+            const icon = document.getElementById('key-eye');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function formatBtc(sat) {
+            return (sat / 100_000_000).toFixed(8) + ' tBTC';
+        }
+
+        function renderUtxos(utxos) {
+            const list = document.getElementById('utxo-list');
+            list.innerHTML = utxos.map(u => `
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="mono text-xs text-slate-400 break-all">${u.txid}:${u.vout}</div>
+                        <div class="font-medium text-white shrink-0">${formatBtc(u.value_sat)}</div>
+                    </div>
+                    <div class="text-xs mt-1 ${u.confirmed ? 'text-emerald-500' : 'text-amber-500'}">
+                        ${u.confirmed ? `<i class="fas fa-check mr-1"></i>Confirmed${u.block_height ? ' at block #' + u.block_height : ''}` : '<i class="fas fa-clock mr-1"></i>Unconfirmed'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setButtonLoading(btn, loading, defaultHtml) {
+            btn.disabled = loading;
+            btn.innerHTML = loading
+                ? '<i class="fas fa-spinner fa-spin"></i> Working...'
+                : defaultHtml;
+        }
+
+        async function loadWallet() {
+            const btn = document.getElementById('btn-load');
+            const privateKey = document.getElementById('private-key').value.trim();
+            const derivationPath = document.getElementById('derivation-path').value.trim();
+
+            if (!privateKey) {
+                addLog('Private key is required.', 'error');
+                return;
+            }
+
+            setButtonLoading(btn, true, '<i class="fas fa-wallet"></i> Load Wallet');
+            addLog('Loading wallet and fetching UTXOs from mempool.space...', 'info');
+
+            try {
+                const res = await fetch('/api/wallet/load', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ private_key: privateKey, derivation_path: derivationPath })
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    throw new Error(`Server returned invalid response (HTTP ${res.status}). Is the app running?`);
+                }
+
+                if (!res.ok || !data.success) {
+                    addLog(data.error || `Failed to load wallet (HTTP ${res.status}).`, 'error');
+                    return;
+                }
+
+                const w = data.wallet;
+                walletLoaded = true;
+                const balanceBtc = Number(w.balance_btc);
+
+                document.getElementById('wallet-empty').classList.add('hidden');
+                document.getElementById('wallet-overview').classList.remove('hidden');
+                document.getElementById('wallet-address').textContent = w.address;
+                document.getElementById('wallet-balance').textContent = balanceBtc.toFixed(8) + ' tBTC';
+                document.getElementById('wallet-balance-sat').textContent = Number(w.balance_sat).toLocaleString() + ' satoshis';
+                document.getElementById('utxo-count').textContent = w.utxo_count;
+                renderUtxos(w.utxos);
+
+                addLog(`Wallet loaded: ${w.address}`, 'success');
+                addLog(`Balance: ${balanceBtc.toFixed(8)} tBTC (${w.utxo_count} UTXO${w.utxo_count !== 1 ? 's' : ''})`, 'success');
+
+                markStepDone(1);
+                unlockStep(2);
+                markStepDone(2);
+                unlockStep(3);
+                unlockStep(4);
+                setProgress(3);
+            } catch (e) {
+                addLog(`Connection error: ${e.message}`, 'error');
+            } finally {
+                setButtonLoading(btn, false, '<i class="fas fa-wallet"></i> Load Wallet');
+            }
+        }
+
+        function renderIoItem(item, type) {
+            const label = type === 'input'
+                ? `${item.txid}:${item.vout}`
+                : item.address + (item.is_change ? ' (change)' : '');
+            return `
+                <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm flex justify-between gap-3">
+                    <span class="mono text-xs text-slate-400 break-all">${label}</span>
+                    <span class="font-medium shrink-0">${formatBtc(item.value_sat)}</span>
+                </div>
+            `;
+        }
+
+        async function signAndBroadcast() {
+            if (!walletLoaded) {
+                addLog('Load a wallet first.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btn-send');
+            const toAddress = document.getElementById('to-address').value.trim();
+            const amount = document.getElementById('amount').value;
+
+            if (!toAddress) {
+                addLog('Destination address is required.', 'error');
+                return;
+            }
+
+            setButtonLoading(btn, true, '<i class="fas fa-paper-plane"></i> Sign &amp; Broadcast Transaction');
+            addLog('Building, signing, and broadcasting transaction...', 'info');
+
+            try {
+                const res = await fetch('/api/transaction/send', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to_address: toAddress, amount_btc: amount })
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (_) {
+                    throw new Error(`Server returned invalid response (HTTP ${res.status}).`);
+                }
+
+                if (!res.ok || !data.success) {
+                    addLog(data.error || `Transaction failed (HTTP ${res.status}).`, 'error');
+                    return;
+                }
+
+                const tx = data.transaction;
+                currentTxid = tx.txid;
+
+                document.getElementById('tx-details').classList.remove('hidden');
+                document.getElementById('tx-actions').innerHTML = tx.actions.map(a =>
+                    `<li class="flex gap-2"><i class="fas fa-check text-emerald-500 mt-0.5"></i><span>${a}</span></li>`
+                ).join('');
+                document.getElementById('tx-from').textContent = tx.from_address;
+                document.getElementById('tx-to').textContent = tx.to_address;
+                document.getElementById('tx-amount').textContent = `${tx.amount_btc} tBTC (${tx.amount_sat.toLocaleString()} sats)`;
+                document.getElementById('tx-fee').textContent = `${tx.fee_btc} tBTC (${tx.fee_sat.toLocaleString()} sats)`;
+                document.getElementById('tx-inputs').innerHTML = tx.inputs.map(i => renderIoItem(i, 'input')).join('');
+                document.getElementById('tx-outputs').innerHTML = tx.outputs.map(o => renderIoItem(o, 'output')).join('');
+
+                const link = document.getElementById('tx-link');
+                link.href = tx.mempool_url;
+                link.textContent = tx.txid;
+                document.getElementById('mempool-link-text').href = tx.mempool_url;
+
+                addLog(`Transaction broadcast! TXID: ${tx.txid}`, 'success');
+                addLog(`View on mempool: ${tx.mempool_url}`, 'info');
+
+                markStepDone(3);
+                markStepDone(4);
+                unlockStep(5);
+                setProgress(5);
+                startConfirmationPolling(tx.txid);
+            } catch (e) {
+                addLog(`Connection error: ${e.message}`, 'error');
+            } finally {
+                setButtonLoading(btn, false, '<i class="fas fa-paper-plane"></i> Sign &amp; Broadcast Transaction');
+            }
+        }
+
+        async function pollConfirmations(txid) {
+            const res = await fetch(`/api/transaction/${txid}/status`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+
+            const conf = data.confirmations;
+            const required = data.required_confirmations;
+            const pct = Math.min(100, (conf / required) * 100);
+
+            document.getElementById('confirmation-panel').classList.remove('hidden');
+            document.getElementById('confirmation-empty').classList.add('hidden');
+            document.getElementById('conf-count').textContent = `${conf} / ${required}`;
+            document.getElementById('conf-bar').style.width = pct + '%';
+
+            const details = document.getElementById('conf-details');
+            details.innerHTML = `
+                <div>TXID: <a href="${data.mempool_url}" target="_blank" class="text-orange-400 hover:text-orange-300 underline break-all">${txid}</a></div>
+                ${data.block_height ? `<div>Block height: #${data.block_height}</div>` : '<div>Status: In mempool (unconfirmed)</div>'}
+            `;
+
+            if (data.fully_confirmed) {
+                document.getElementById('conf-status').innerHTML = '<i class="fas fa-check-circle mr-2 text-emerald-400"></i><span class="text-emerald-400">10 confirmations reached!</span>';
+                document.getElementById('conf-bar').classList.remove('bg-amber-500');
+                document.getElementById('conf-bar').classList.add('bg-emerald-500');
+                document.getElementById('conf-success').classList.remove('hidden');
+                markStepDone(5);
+                addLog(`Transaction confirmed with ${conf} confirmations.`, 'success');
+                return true;
+            }
+
+            if (data.confirmed) {
+                document.getElementById('conf-status').innerHTML = `<i class="fas fa-hourglass-half mr-2 text-amber-400"></i><span class="text-amber-400">${conf} confirmation${conf !== 1 ? 's' : ''} — waiting for ${required}...</span>`;
+                addLog(`${conf}/${required} confirmations...`, 'info');
+            } else {
+                document.getElementById('conf-status').innerHTML = '<i class="fas fa-spinner fa-spin mr-2 text-amber-400"></i><span class="text-amber-400">Waiting for first confirmation...</span>';
+            }
+
+            return false;
+        }
+
+        function startConfirmationPolling(txid) {
+            if (confirmationTimer) clearInterval(confirmationTimer);
+
+            pollConfirmations(txid).catch(e => addLog(`Status check failed: ${e.message}`, 'error'));
+
+            confirmationTimer = setInterval(async () => {
+                try {
+                    const done = await pollConfirmations(txid);
+                    if (done) clearInterval(confirmationTimer);
+                } catch (e) {
+                    addLog(`Status check failed: ${e.message}`, 'error');
+                }
+            }, 8000);
+        }
+
+        window.onload = () => {
+            [3, 4].forEach(n => setStepControls(n, false));
+            addLog('Ready. Start by loading your wallet in Step 1.', 'success');
+            setProgress(1);
+        };
+    </script>
+</body>
+</html>
