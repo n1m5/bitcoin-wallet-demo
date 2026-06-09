@@ -1,3 +1,4 @@
 bitcoinlib
 requests
 flask
+gunicorn
