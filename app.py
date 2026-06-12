@@ -10,7 +10,12 @@ app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-in-produc
 
 MEMPOOL_API = "https://mempool.space/testnet/api"
 MEMPOOL_TX_URL = "https://mempool.space/testnet/tx"
-REQUIRED_CONFIRMATIONS = 10
+REQUIRED_CONFIRMATIONS = 5
+
+# Shop demo settings (testnet only)
+SHOP_MERCHANT_ADDRESS = "tb1ql7y0k5xct73ksaq03wrtn6pfvu6fktrxm8p4qj"
+SHOP_SNACK_PRICE_SAT = 10_000  # All snacks cost exactly this for simplicity
+MERCHANT_WIF = "cQaKzNNXuXUeAzbRrg6QWatqGZddLVeeC6Sgb1cTwTiCVrA4y19g"  # for merchant monitoring demo (read-only view)
 
 
 def get_wallet_name():
@@ -23,6 +28,14 @@ def fetch_address_utxos(address):
     response = requests.get(f"{MEMPOOL_API}/address/{address}/utxo", timeout=15)
     response.raise_for_status()
     return response.json()
+
+
+def fetch_address_txs(address, count=15):
+    """Fetch recent transactions involving this address (newest first)."""
+    response = requests.get(f"{MEMPOOL_API}/address/{address}/txs", timeout=15)
+    response.raise_for_status()
+    txs = response.json()
+    return txs[:count]
 
 
 def sync_wallet_utxos(wallet, address):
@@ -52,7 +65,9 @@ def load_or_create_wallet(private_key, derivation_path):
         scheme="single",
         key_path=derivation_path,
     )
-    wallet.scan()
+    # Note: intentionally skip wallet.scan() here. For single-key imported WIFs the scan
+    # is unreliable (depth/key list mismatches) and can fail due to upstream provider issues.
+    # We populate UTXOs explicitly via mempool.space sync below, which is all the demo needs.
 
     address = wallet.get_key().address
     mempool_utxos = sync_wallet_utxos(wallet, address)
@@ -89,6 +104,39 @@ def get_loaded_wallet():
     if not session.get("wallet_loaded"):
         raise ValueError("No wallet loaded. Please load a wallet first.")
     return Wallet(get_wallet_name())
+
+
+def get_wallet_info():
+    """Return current wallet snapshot (requires wallet_loaded in session)."""
+    if not session.get("wallet_loaded"):
+        raise ValueError("No wallet loaded. Please load a wallet first.")
+
+    wallet = get_loaded_wallet()
+    address = wallet.get_key().address
+    mempool_utxos = sync_wallet_utxos(wallet, address)
+    balance_sat = sum(utxo["value"] for utxo in mempool_utxos)
+
+    formatted_utxos = [
+        {
+            "txid": utxo["txid"],
+            "vout": utxo["vout"],
+            "value_sat": utxo["value"],
+            "value_btc": utxo["value"] / 100_000_000,
+            "confirmed": utxo.get("status", {}).get("confirmed", False),
+            "block_height": utxo.get("status", {}).get("block_height"),
+        }
+        for utxo in mempool_utxos
+    ]
+
+    return {
+        "address": address,
+        "derivation_path": session.get("derivation_path", "m/84'/1'/0'/0/0"),
+        "network": "testnet",
+        "balance_sat": balance_sat,
+        "balance_btc": balance_sat / 100_000_000,
+        "utxo_count": len(formatted_utxos),
+        "utxos": formatted_utxos,
+    }
 
 
 def format_txid(raw_txid):
@@ -158,6 +206,17 @@ def load_wallet():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@app.route("/api/wallet/info", methods=["GET"])
+def get_wallet_info_route():
+    if not session.get("wallet_loaded"):
+        return jsonify({"success": False, "error": "No wallet loaded."}), 400
+    try:
+        info = get_wallet_info()
+        return jsonify({"success": True, "wallet": info})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
 @app.route("/api/transaction/send", methods=["POST"])
 def send_transaction():
     if not session.get("wallet_loaded"):
@@ -214,6 +273,64 @@ def send_transaction():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@app.route("/api/shop/checkout", methods=["POST"])
+def shop_checkout():
+    if not session.get("wallet_loaded"):
+        return jsonify({"success": False, "error": "Load a wallet before checking out."}), 400
+
+    data = request.json or {}
+    total_sats = data.get("total_sats")
+    items = data.get("items") or []  # [{id, name, qty, price_sat}, ...] for display only
+
+    try:
+        total_sats = int(total_sats)
+        if total_sats <= 0:
+            raise ValueError("Total must be greater than zero.")
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "error": f"Invalid total: {exc}"}), 400
+
+    try:
+        wallet = get_loaded_wallet()
+        from_address = wallet.get_key().address
+        sync_wallet_utxos(wallet, from_address)
+
+        amount_btc = total_sats / 100_000_000
+        tx = wallet.send_to(
+            to_address=SHOP_MERCHANT_ADDRESS,
+            amount=total_sats,
+            fee="normal",
+            broadcast=False,
+        )
+
+        details = transaction_details(tx, wallet)
+        details["from_address"] = from_address
+        details["to_address"] = SHOP_MERCHANT_ADDRESS
+        details["amount_sat"] = total_sats
+        details["amount_btc"] = amount_btc
+        details["network"] = "testnet"
+        details["fee_rate"] = "normal"
+        details["items"] = items
+        details["order_total_sat"] = total_sats
+
+        # Shop-themed action narrative for the demo journey
+        details["actions"] = [
+            f"Snack order created — {len(items)} item type(s), total {total_sats:,} sats",
+            "Selected UTXOs covering purchase amount + miner fee",
+            "Constructed SegWit (P2WPKH) transaction",
+            "Signed inputs using your imported private key (server-side for demo)",
+            "Broadcast raw transaction to Bitcoin testnet",
+        ]
+
+        tx.send()
+        txid = tx.txid
+        details["txid"] = txid
+        details["mempool_url"] = f"{MEMPOOL_TX_URL}/{txid}"
+
+        return jsonify({"success": True, "transaction": details})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
 @app.route("/api/transaction/<txid>/status", methods=["GET"])
 def transaction_status(txid):
     try:
@@ -245,6 +362,71 @@ def transaction_status(txid):
                 "mempool_url": f"{MEMPOOL_TX_URL}/{txid}",
             }
         )
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@app.route("/api/merchant/info", methods=["GET"])
+def merchant_info():
+    """Read-only merchant monitor. Returns balance + recent incoming payments to the shop address."""
+    address = SHOP_MERCHANT_ADDRESS
+    try:
+        # Balance via UTXOs (consistent with customer side)
+        utxos = fetch_address_utxos(address)
+        balance_sat = sum(utxo["value"] for utxo in utxos)
+
+        # Recent tx history (newest first)
+        raw_txs = fetch_address_txs(address, count=50)
+
+        # Get current tip for confirmation counts
+        tip_height = None
+        try:
+            tip_resp = requests.get(f"{MEMPOOL_API}/blocks/tip/height", timeout=10)
+            tip_resp.raise_for_status()
+            tip_height = tip_resp.json()
+        except Exception:
+            pass
+
+        recent_received = []
+        for tx in raw_txs:
+            received_sat = 0
+            for vout in tx.get("vout", []):
+                if vout.get("scriptpubkey_address") == address:
+                    received_sat += vout.get("value", 0)
+
+            if received_sat <= 0:
+                continue
+
+            status = tx.get("status", {}) or {}
+            confirmed = status.get("confirmed", False)
+            block_height = status.get("block_height")
+            confirmations = 0
+            if confirmed and block_height and tip_height:
+                confirmations = max(0, tip_height - block_height + 1)
+
+            recent_received.append({
+                "txid": tx["txid"],
+                "received_sat": received_sat,
+                "received_btc": received_sat / 100_000_000,
+                "fee": tx.get("fee", 0),
+                "fee_btc": (tx.get("fee") or 0) / 100_000_000,
+                "confirmed": confirmed,
+                "confirmations": confirmations,
+                "block_height": block_height,
+                "block_time": status.get("block_time"),
+                "mempool_url": f"{MEMPOOL_TX_URL}/{tx['txid']}",
+            })
+
+        # Keep a reasonable number for the UI (more for denser view)
+        recent_received = recent_received[:25]
+
+        return jsonify({
+            "success": True,
+            "address": address,
+            "balance_sat": balance_sat,
+            "balance_btc": balance_sat / 100_000_000,
+            "recent_received": recent_received,
+        })
     except Exception as exc:
         return jsonify({"success": False, "error": str(exc)}), 500
 
