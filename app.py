@@ -431,6 +431,49 @@ def merchant_info():
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@app.route("/api/estimate-fee", methods=["POST"])
+def estimate_fee():
+    """Dry-run build of the tx to return estimated fee without broadcasting."""
+    if not session.get("wallet_loaded"):
+        return jsonify({"success": False, "error": "Load a wallet before estimating fees."}), 400
+
+    data = request.json or {}
+    to_address = (data.get("to_address") or SHOP_MERCHANT_ADDRESS).strip()
+    amount_sat = data.get("amount_sat")
+
+    try:
+        amount_sat = int(amount_sat)
+        if amount_sat <= 0:
+            raise ValueError("Amount must be greater than zero.")
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "error": f"Invalid amount: {exc}"}), 400
+
+    try:
+        wallet = get_loaded_wallet()
+        from_address = wallet.get_key().address
+        sync_wallet_utxos(wallet, from_address)
+
+        tx = wallet.send_to(
+            to_address=to_address,
+            amount=amount_sat,
+            fee="normal",
+            broadcast=False,
+        )
+
+        return jsonify({
+            "success": True,
+            "from_address": from_address,
+            "to_address": to_address,
+            "amount_sat": amount_sat,
+            "fee_sat": tx.fee,
+            "fee_btc": tx.fee / 100_000_000,
+            "size_bytes": tx.size,
+            "vsize": getattr(tx, "vsize", None),
+        })
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5001))
     print(f"Open http://127.0.0.1:{port} in your browser")
