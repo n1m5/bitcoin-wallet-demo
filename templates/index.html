@@ -107,53 +107,86 @@
 
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
                 <div id="wallet-form">
-                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                        <div class="md:col-span-3">
-                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Private Key (WIF)</label>
-                            <div class="relative">
-                                <input id="private-key" type="password"
-                                       value="cT6ZEeyc3LYuwh7gGVP6Wb7TNBzRHpNrtUYiCFsguRxkARVfqbxY"
-                                       class="mono w-full p-3 pr-11 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
-                                <button type="button" onclick="toggleKeyVisibility()" 
-                                        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                    <i id="key-eye" class="fas fa-eye"></i>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <button type="button" id="tab-import-wif" onclick="switchWalletImportTab('wif')"
+                                class="wallet-import-tab px-4 py-2 rounded-xl text-sm font-medium border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+                            <i class="fas fa-key mr-1.5"></i>Private key (WIF)
+                        </button>
+                        <button type="button" id="tab-import-xpub" onclick="switchWalletImportTab('xpub')"
+                                class="wallet-import-tab px-4 py-2 rounded-xl text-sm font-medium border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300">
+                            <i class="fas fa-eye mr-1.5"></i>Watch-only (xpub)
+                        </button>
+                    </div>
+
+                    <div id="wallet-import-wif-panel">
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <div class="md:col-span-3">
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Private Key (WIF)</label>
+                                <div class="relative">
+                                    <input id="private-key" type="password"
+                                           value="cT6ZEeyc3LYuwh7gGVP6Wb7TNBzRHpNrtUYiCFsguRxkARVfqbxY"
+                                           class="mono w-full p-3 pr-11 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
+                                    <button type="button" onclick="toggleKeyVisibility()" 
+                                            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
+                                        <i id="key-eye" class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <p class="mt-1.5 text-[11px] text-slate-500">Testnet WIF only. Never use mainnet keys here.</p>
+                                <button type="button" onclick="startQRScan()" 
+                                        class="mt-2 text-xs px-3 py-1.5 rounded-2xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/15 flex items-center gap-2">
+                                    <i class="fas fa-qrcode"></i>
+                                    <span>Scan QR code with camera</span>
                                 </button>
                             </div>
-                            <p class="mt-1.5 text-[11px] text-slate-500">Testnet WIF only. Never use mainnet keys here.</p>
-                            <button type="button" onclick="startQRScan()" 
-                                    class="mt-2 text-xs px-3 py-1.5 rounded-2xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/15 flex items-center gap-2">
-                                <i class="fas fa-qrcode"></i>
-                                <span>Scan QR code with camera</span>
-                            </button>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Derivation Path</label>
+                                <input id="derivation-path" value="m/84'/1'/0'/0/0"
+                                       class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
+                                <p class="mt-1.5 text-[11px] text-slate-500">BIP84 SegWit testnet</p>
+                            </div>
                         </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-medium text-slate-400 mb-1.5">Derivation Path</label>
-                            <input id="derivation-path" value="m/84'/1'/0'/0/0"
-                                   class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
-                            <p class="mt-1.5 text-[11px] text-slate-500">BIP84 SegWit testnet</p>
+
+                        <div class="mt-4 flex gap-3">
+                            <button onclick="loadWallet()"
+                                    class="flex-1 md:flex-none px-8 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition rounded-2xl font-semibold flex items-center justify-center gap-2">
+                                <i class="fas fa-key"></i>
+                                <span>Import Wallet</span>
+                            </button>
+                            <button onclick="useDemoWalletHint()" 
+                                    class="px-5 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm">
+                                Use demo key
+                            </button>
                         </div>
                     </div>
 
-                    <div class="mt-4 flex gap-3">
-                        <button onclick="loadWallet()"
-                                class="flex-1 md:flex-none px-8 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition rounded-2xl font-semibold flex items-center justify-center gap-2">
-                            <i class="fas fa-key"></i>
-                            <span>Import Wallet</span>
-                        </button>
-                        <button onclick="useDemoWalletHint()" 
-                                class="px-5 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm">
-                            Use demo key
-                        </button>
+                    <div id="wallet-import-xpub-panel" class="hidden">
+                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Account xpub / descriptor</label>
+                        <textarea id="xpub-input" rows="3"
+                                  placeholder="[fingerprint/m/84'/1'/0']vpub..."
+                                  class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-sky-500 resize-y min-h-[4.5rem]"></textarea>
+                        <p class="mt-1.5 text-[11px] text-slate-500">
+                            BIP84 testnet vpub or descriptor — your private key never leaves your wallet.
+                        </p>
+                        <div class="mt-4 flex gap-3">
+                            <button onclick="loadXpubWallet()"
+                                    class="flex-1 md:flex-none px-8 py-3 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 transition rounded-2xl font-semibold flex items-center justify-center gap-2">
+                                <i class="fas fa-eye"></i>
+                                <span>Load watch-only wallet</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div id="wallet-loaded-banner" class="hidden mt-1 text-sm bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl px-4 py-3 flex items-center gap-3">
-                    <i class="fas fa-check-circle"></i>
+                    <i id="banner-icon" class="fas fa-check-circle"></i>
                     <div class="flex-1">
-                        <div>Wallet imported. You can now shop and pay.</div>
-                        <div class="mt-0.5 text-emerald-200">
+                        <div id="banner-title">Wallet imported. You can now shop and pay.</div>
+                        <div id="banner-watchonly-note" class="hidden mt-1 text-xs text-sky-200/90">
+                            Watch-only — sign and broadcast in your external wallet at checkout.
+                        </div>
+                        <div class="mt-0.5 text-emerald-200" id="banner-balance-row">
                             Balance: <span id="banner-balance" class="font-semibold mono text-white"></span>
-                            <button onclick="refreshWallet()" class="ml-3 underline hover:no-underline text-xs text-emerald-300">Refresh</button>
+                            <button onclick="refreshWallet()" class="ml-3 underline hover:no-underline text-xs text-emerald-300" id="banner-refresh-btn">Refresh</button>
                         </div>
                     </div>
                 </div>
@@ -270,48 +303,89 @@
                                 </div>
                                 <div class="text-[10px] text-slate-500">paid to miners • actual fee may vary slightly</div>
                             </div>
-                            <div class="pt-2 text-[11px] text-amber-400 flex gap-2 items-start">
+                            <div id="checkout-broadcast-warning" class="pt-2 text-[11px] text-amber-400 flex gap-2 items-start">
                                 <i class="fas fa-exclamation-triangle mt-0.5"></i>
-                                <span>This will create and broadcast a real transaction on Bitcoin testnet.</span>
+                                <span id="checkout-broadcast-warning-text">This will create and broadcast a real transaction on Bitcoin testnet.</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- BIP21 external payment option (not enabled by default) -->
-                <div class="mt-4 pt-4 border-t border-slate-700">
-                    <label class="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" id="bip21-toggle" class="accent-emerald-600" onchange="toggleBip21Mode()">
-                        <span class="text-slate-300">Use BIP21 payment request (pay from your own external wallet — off by default)</span>
-                    </label>
+                <!-- Payment method: watch-only only (native for WIF imports is automatic) -->
+                <div id="checkout-payment-methods" class="hidden mt-4 pt-4 border-t border-slate-700">
+                    <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2">Payment method</div>
+                    <div class="space-y-2 text-sm">
+                        <label id="payment-method-native-wrap" class="hidden flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="payment-method" value="native" class="accent-orange-500 mt-0.5" checked onchange="setPaymentMethod()">
+                            <span>
+                                <span class="text-slate-200 font-medium">Native transaction</span>
+                                <span class="block text-[11px] text-slate-500">Build, sign &amp; broadcast in this demo</span>
+                            </span>
+                        </label>
+                        <label id="payment-method-bip21-wrap" class="flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="payment-method" value="bip21" class="accent-orange-500 mt-0.5" onchange="setPaymentMethod()">
+                            <span>
+                                <span class="text-slate-200 font-medium">BIP21 payment request</span>
+                                <span class="block text-[11px] text-slate-500">QR / URI for a compatible external wallet</span>
+                            </span>
+                        </label>
+                        <label id="payment-method-psbt-wrap" class="flex items-start gap-2 cursor-pointer">
+                            <input type="radio" name="payment-method" value="psbt" class="accent-orange-500 mt-0.5" onchange="setPaymentMethod()">
+                            <span>
+                                <span class="text-slate-200 font-medium">PSBT export (BIP174)</span>
+                                <span class="block text-[11px] text-slate-500">Unsigned transaction for Electrum, Sparrow, etc.</span>
+                            </span>
+                        </label>
+                    </div>
 
-                    <div id="bip21-panel" class="hidden mt-4 p-4 bg-slate-950 border border-slate-700 rounded-2xl">
-                        <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2">BIP21 Payment Request</div>
-
-                        <div id="bip21-invoice-summary" class="mb-3 p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs">
+                    <div id="external-payment-section" class="hidden mt-4 p-4 bg-slate-950 border border-slate-700 rounded-2xl space-y-3">
+                        <div id="checkout-invoice-summary" class="p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-slate-400">Invoice</span>
-                                <span id="bip21-invoice-id" class="mono text-slate-500"></span>
+                                <span id="checkout-invoice-id" class="mono text-slate-500"></span>
                             </div>
                             <div class="mt-1 flex items-baseline justify-between gap-2">
-                                <span id="bip21-invoice-amount" class="font-semibold text-white tabular-nums"></span>
-                                <span id="bip21-invoice-expiry" class="text-amber-400 font-medium tabular-nums"></span>
+                                <span id="checkout-invoice-amount" class="font-semibold text-white tabular-nums"></span>
+                                <span id="checkout-invoice-expiry" class="text-amber-400 font-medium tabular-nums"></span>
                             </div>
-                            <div id="bip21-invoice-items" class="mt-1 text-slate-500"></div>
+                            <div id="checkout-invoice-items" class="mt-1 text-slate-500"></div>
                         </div>
 
-                        <div id="bip21-qr" class="flex justify-center mb-3"></div>
-                        <div class="text-[10px] text-slate-400 mb-1">Tap or copy the URI below into a compatible wallet:</div>
-                        <div id="bip21-uri" onclick="copyToClipboard(this.textContent, this)"
-                             class="mono text-xs bg-slate-900 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
-                        <div id="bip21-payment-status" class="hidden mt-3 p-3 rounded-xl border text-xs"></div>
+                        <div id="bip21-panel" class="hidden">
+                            <div class="uppercase text-[10px] tracking-[1px] text-slate-400 mb-2">BIP21 Payment Request</div>
+                            <div id="bip21-qr" class="flex justify-center mb-3"></div>
+                            <div class="text-[10px] text-slate-400 mb-1">Tap or copy the URI below into a compatible wallet:</div>
+                            <div id="bip21-uri" onclick="copyToClipboard(this.textContent, this)"
+                                 class="mono text-xs bg-slate-900 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                            <div class="mt-2 text-[10px] text-slate-500">
+                                URI includes <span class="text-slate-400">time</span> and <span class="text-slate-400">exp</span> (BIP21 extensions).
+                            </div>
+                        </div>
 
-                        <div class="mt-3 text-[10px] text-slate-500">
-                            URI includes <span class="text-slate-400">time</span> and <span class="text-slate-400">exp</span> (BIP21 extensions).
-                            Payment status updates automatically — no need to open Merchant view.
+                        <div id="psbt-panel" class="hidden">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="uppercase text-[10px] tracking-[1px] text-slate-400">PSBT Export (BIP174)</div>
+                                <button type="button" onclick="loadPsbtExport()"
+                                        class="text-[10px] px-2.5 py-1 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300">
+                                    <i class="fas fa-sync text-[9px] mr-1"></i>Refresh PSBT
+                                </button>
+                            </div>
+                            <div id="psbt-meta" class="mb-2 text-[10px] text-slate-500"></div>
+                            <div class="text-[10px] text-slate-400 mb-1">Copy this base64 PSBT into your signer, then broadcast the finalized tx:</div>
+                            <div id="psbt-base64" onclick="copyToClipboard(this.textContent, this)"
+                                 class="mono text-[10px] bg-slate-900 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700 max-h-28 overflow-auto"></div>
+                            <div class="mt-2 text-[10px] text-slate-500">
+                                Unsigned PSBT — sign in your wallet, then broadcast.
+                            </div>
+                        </div>
+
+                        <div id="checkout-payment-status" class="hidden p-3 rounded-xl border text-xs"></div>
+
+                        <div class="text-[10px] text-slate-500">
+                            Payment status updates automatically on this page.
                         </div>
                         <button onclick="showMerchantMonitor()"
-                                class="mt-3 w-full text-xs py-2 rounded-2xl border border-slate-600 hover:bg-slate-800 font-medium flex items-center justify-center gap-2">
+                                class="w-full text-xs py-2 rounded-2xl border border-slate-600 hover:bg-slate-800 font-medium flex items-center justify-center gap-2">
                             <i class="fas fa-store"></i>
                             <span>Open Merchant Monitor</span>
                         </button>
@@ -631,9 +705,132 @@
         }
 
         function useDemoWalletHint() {
+            switchWalletImportTab("wif");
             document.getElementById("private-key").value = "cT6ZEeyc3LYuwh7gGVP6Wb7TNBzRHpNrtUYiCFsguRxkARVfqbxY";
             document.getElementById("derivation-path").value = "m/84'/1'/0'/0/0";
             addLog("Demo key filled. Click Import Wallet.");
+        }
+
+        function isWatchOnlyWallet() {
+            return currentWallet?.wallet_mode === "watchonly";
+        }
+
+        function switchWalletImportTab(tab) {
+            const wifTab = document.getElementById("tab-import-wif");
+            const xpubTab = document.getElementById("tab-import-xpub");
+            const wifPanel = document.getElementById("wallet-import-wif-panel");
+            const xpubPanel = document.getElementById("wallet-import-xpub-panel");
+            if (!wifTab || !xpubTab || !wifPanel || !xpubPanel) return;
+
+            const active = ["border-emerald-500/40", "bg-emerald-500/10", "text-emerald-300"];
+            const inactive = ["border-slate-700", "text-slate-400", "hover:border-slate-600", "hover:text-slate-300"];
+
+            const setTabStyle = (el, isActive) => {
+                el.classList.remove(...active, ...inactive);
+                if (isActive) el.classList.add(...active);
+                else el.classList.add(...inactive);
+            };
+
+            if (tab === "xpub") {
+                wifPanel.classList.add("hidden");
+                xpubPanel.classList.remove("hidden");
+                setTabStyle(wifTab, false);
+                setTabStyle(xpubTab, true);
+                xpubTab.classList.remove("border-emerald-500/40", "bg-emerald-500/10", "text-emerald-300");
+                xpubTab.classList.add("border-sky-500/40", "bg-sky-500/10", "text-sky-300");
+            } else {
+                xpubPanel.classList.add("hidden");
+                wifPanel.classList.remove("hidden");
+                setTabStyle(wifTab, true);
+                xpubTab.classList.remove("border-sky-500/40", "bg-sky-500/10", "text-sky-300");
+                setTabStyle(xpubTab, false);
+            }
+        }
+
+        function getDefaultPaymentMethod() {
+            return isWatchOnlyWallet() ? "psbt" : "native";
+        }
+
+        function setDefaultPaymentMethod() {
+            const method = getDefaultPaymentMethod();
+            const radio = document.querySelector(`input[name="payment-method"][value="${method}"]`);
+            if (radio) radio.checked = true;
+            setPaymentMethod();
+        }
+
+        function applyCheckoutPaymentUI() {
+            const watchOnly = isWatchOnlyWallet();
+            const methodsSection = document.getElementById("checkout-payment-methods");
+            const bip21Wrap = document.getElementById("payment-method-bip21-wrap");
+            const psbtWrap = document.getElementById("payment-method-psbt-wrap");
+
+            if (methodsSection) methodsSection.classList.toggle("hidden", !watchOnly);
+            if (bip21Wrap) bip21Wrap.classList.toggle("hidden", !watchOnly);
+            if (psbtWrap) psbtWrap.classList.toggle("hidden", !watchOnly);
+
+            const warnText = document.getElementById("checkout-broadcast-warning-text");
+            if (warnText) {
+                warnText.textContent = watchOnly
+                    ? "Sign and broadcast in your external wallet. This demo never sees your private key."
+                    : "This will create and broadcast a real transaction on Bitcoin testnet.";
+            }
+
+            if (watchOnly && getSelectedPaymentMethod() === "native") {
+                setDefaultPaymentMethod();
+            } else if (!watchOnly) {
+                const nativeRadio = document.querySelector('input[name="payment-method"][value="native"]');
+                if (nativeRadio) nativeRadio.checked = true;
+                document.getElementById("external-payment-section")?.classList.add("hidden");
+                document.getElementById("btn-pay").style.display = "";
+                stopCheckoutMonitoring();
+            }
+        }
+
+        function showWalletLoadedUI() {
+            document.getElementById("wallet-form").classList.add("hidden");
+            document.getElementById("wallet-loaded-banner").classList.remove("hidden");
+        }
+
+        async function loadXpubWallet() {
+            const btns = document.querySelectorAll("#wallet-import-xpub-panel button");
+            const origTexts = [];
+            btns.forEach((b, i) => { origTexts[i] = b.innerHTML; b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scanning…'; });
+
+            const xpubInput = document.getElementById("xpub-input").value.trim();
+            if (!xpubInput) {
+                alert("Extended public key (xpub/vpub) or descriptor is required.");
+                btns.forEach((b, i) => { b.disabled = false; b.innerHTML = origTexts[i]; });
+                return;
+            }
+
+            try {
+                const res = await fetch("/api/wallet/load-xpub", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ xpub: xpubInput })
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || "Failed to load watch-only wallet");
+                }
+
+                currentWallet = data.wallet;
+                walletLoaded = true;
+                showWalletLoadedUI();
+                updateWalletUI();
+                enableShopUI();
+                addLog(`Watch-only wallet loaded: ${currentWallet.xpub_preview} — ${formatSats(currentWallet.balance_sat)}`, "success");
+
+                setTimeout(() => {
+                    document.getElementById("shop-section").scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 120);
+            } catch (e) {
+                addLog("Watch-only load failed: " + e.message, "error");
+                alert("Failed to load watch-only wallet: " + e.message);
+            } finally {
+                btns.forEach((b, i) => { b.disabled = false; b.innerHTML = origTexts[i]; });
+            }
         }
 
         async function loadWallet() {
@@ -664,11 +861,7 @@
 
                 currentWallet = data.wallet;
                 walletLoaded = true;
-
-                // UI updates
-                document.getElementById("wallet-form").classList.add("hidden");
-                document.getElementById("wallet-loaded-banner").classList.remove("hidden");
-
+                showWalletLoadedUI();
                 updateWalletUI();
                 enableShopUI();
                 addLog(`Wallet loaded: ${currentWallet.address} — ${formatSats(currentWallet.balance_sat)}`, "success");
@@ -702,10 +895,41 @@
         function updateWalletUI() {
             if (!currentWallet) return;
 
+            const watchOnly = isWatchOnlyWallet();
+            const banner = document.getElementById("wallet-loaded-banner");
+            const bannerTitle = document.getElementById("banner-title");
+            const bannerIcon = document.getElementById("banner-icon");
+            const watchNote = document.getElementById("banner-watchonly-note");
+            const balanceRow = document.getElementById("banner-balance-row");
+            const refreshBtn = document.getElementById("banner-refresh-btn");
+
+            if (banner) {
+                if (watchOnly) {
+                    banner.className = "mt-1 text-sm bg-sky-500/10 border border-sky-500/30 text-sky-200 rounded-2xl px-4 py-3 flex items-center gap-3";
+                    if (bannerTitle) bannerTitle.textContent = `Watch-only wallet loaded (${currentWallet.xpub_preview || "xpub"}).`;
+                    if (bannerIcon) bannerIcon.className = "fas fa-eye";
+                    watchNote?.classList.remove("hidden");
+                    if (balanceRow) balanceRow.className = "mt-0.5 text-sky-100";
+                    if (refreshBtn) refreshBtn.className = "ml-3 underline hover:no-underline text-xs text-sky-200";
+                } else {
+                    banner.className = "mt-1 text-sm bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl px-4 py-3 flex items-center gap-3";
+                    if (bannerTitle) bannerTitle.textContent = "Wallet imported. You can now shop and pay.";
+                    if (bannerIcon) bannerIcon.className = "fas fa-check-circle";
+                    watchNote?.classList.add("hidden");
+                    if (balanceRow) balanceRow.className = "mt-0.5 text-emerald-200";
+                    if (refreshBtn) refreshBtn.className = "ml-3 underline hover:no-underline text-xs text-emerald-300";
+                }
+            }
+
+            applyCheckoutPaymentUI();
+
             // Pill (compact nav)
             const pill = document.getElementById("wallet-pill");
             pill.style.display = "flex";
-            document.getElementById("pill-address").textContent = currentWallet.address.slice(0, 10) + "..." + currentWallet.address.slice(-6);
+            const addrLabel = watchOnly
+                ? `👁 ${currentWallet.address.slice(0, 8)}…${currentWallet.address.slice(-4)}`
+                : currentWallet.address.slice(0, 10) + "..." + currentWallet.address.slice(-6);
+            document.getElementById("pill-address").textContent = addrLabel;
             document.getElementById("pill-balance").textContent = formatSats(currentWallet.balance_sat);
 
             // Shop balance pill — prominent sats + smaller tBTC
@@ -878,16 +1102,27 @@
             btn.disabled = false;
         }
 
+        function resetCheckoutInvoiceUI() {
+            const amountEl = document.getElementById("checkout-invoice-amount");
+            const expiryEl = document.getElementById("checkout-invoice-expiry");
+            const idEl = document.getElementById("checkout-invoice-id");
+            const itemsEl = document.getElementById("checkout-invoice-items");
+            if (amountEl) amountEl.textContent = "—";
+            if (idEl) idEl.textContent = "";
+            if (itemsEl) itemsEl.textContent = "";
+            if (expiryEl) {
+                expiryEl.textContent = "Creating invoice…";
+                expiryEl.className = "text-slate-400 font-medium";
+            }
+        }
+
         async function proceedToCheckout() {
             if (!walletLoaded || !cart.length) return;
 
-            // Reset BIP21 option to off (default) on each new checkout
-            const bip21Toggle = document.getElementById("bip21-toggle");
-            const bip21Panel = document.getElementById("bip21-panel");
-            const payBtn = document.getElementById("btn-pay");
-            if (bip21Toggle) bip21Toggle.checked = false;
-            if (bip21Panel) bip21Panel.classList.add("hidden");
-            if (payBtn) payBtn.style.display = "";
+            stopCheckoutMonitoring();
+            hideCheckoutPaymentStatus();
+            currentInvoice = null;
+            resetCheckoutInvoiceUI();
 
             const total = getCartTotal();
             if (total > currentWallet.balance_sat) {
@@ -970,12 +1205,23 @@
             document.getElementById("pay-error").classList.add("hidden");
             document.getElementById("btn-pay").disabled = false;
             document.getElementById("btn-pay").innerHTML = `<i class="fas fa-bolt"></i><span class="ml-2">Confirm &amp; Pay in Bitcoin</span>`;
+
+            applyCheckoutPaymentUI();
+
+            if (currentInvoice?.status === "open" && getInvoiceSecondsRemaining(currentInvoice) > 0) {
+                updateCheckoutInvoiceUI();
+                if (isWatchOnlyWallet()) {
+                    setDefaultPaymentMethod();
+                }
+            } else {
+                addLog("Checkout opened without a valid invoice.", "error");
+            }
         }
 
         async function clearCurrentInvoice() {
             currentInvoice = null;
-            stopBip21Monitoring();
-            hideBip21PaymentStatus();
+            stopCheckoutMonitoring();
+            hideCheckoutPaymentStatus();
             try {
                 await fetch("/api/shop/invoice", { method: "DELETE" });
             } catch (e) {
@@ -992,16 +1238,16 @@
             if (feeSatsEl) feeSatsEl.textContent = "";
             if (feeBtcEl) feeBtcEl.textContent = "";
 
-            // Reset BIP21 option
-            const bip21Toggle = document.getElementById("bip21-toggle");
-            const bip21Panel = document.getElementById("bip21-panel");
-            const payBtn = document.getElementById("btn-pay");
-            if (bip21Toggle) bip21Toggle.checked = false;
-            if (bip21Panel) bip21Panel.classList.add("hidden");
-            if (payBtn) payBtn.style.display = "";
+            applyCheckoutPaymentUI();
         }
 
         async function payForOrder() {
+            if (isWatchOnlyWallet()) {
+                alert("Watch-only wallet: choose BIP21 or PSBT at checkout and sign in your external wallet.");
+                setDefaultPaymentMethod();
+                return;
+            }
+
             const btn = document.getElementById("btn-pay");
             const errEl = document.getElementById("pay-error");
             errEl.classList.add("hidden");
@@ -1060,8 +1306,8 @@
                         addLog("Invoice match update failed: " + e.message, "error");
                     }
                     currentInvoice = null;
-                    stopBip21Monitoring();
-                    hideBip21PaymentStatus();
+                    stopCheckoutMonitoring();
+                    hideCheckoutPaymentStatus();
                 }
 
                 addLog(`Payment successful! TXID: ${tx.txid}`, "success");
@@ -1219,6 +1465,12 @@
             document.getElementById("wallet-loaded-banner").classList.add("hidden");
             document.getElementById("wallet-pill").style.display = "none";
             document.getElementById("shop-balance-pill").style.display = "none";
+            switchWalletImportTab("wif");
+            const xpubInput = document.getElementById("xpub-input");
+            if (xpubInput) xpubInput.value = "";
+            document.getElementById("checkout-payment-methods")?.classList.add("hidden");
+            const warnText = document.getElementById("checkout-broadcast-warning-text");
+            if (warnText) warnText.textContent = "This will create and broadcast a real transaction on Bitcoin testnet.";
 
             document.getElementById("cart-items").innerHTML = "";
             document.getElementById("cart-total-sats").textContent = "0";
@@ -1280,16 +1532,31 @@
         }
 
         function getInvoiceSecondsRemaining(invoice) {
-            if (!invoice || !invoice.expires_at) return 0;
-            return Math.max(0, invoice.expires_at - Math.floor(Date.now() / 1000));
+            if (!invoice) return null;
+            if (invoice.expires_at) {
+                return Math.max(0, invoice.expires_at - Math.floor(Date.now() / 1000));
+            }
+            if (typeof invoice.seconds_remaining === "number") {
+                return Math.max(0, invoice.seconds_remaining);
+            }
+            return null;
         }
 
-        function updateBip21InvoiceUI() {
+        function getSelectedPaymentMethod() {
+            return document.querySelector('input[name="payment-method"]:checked')?.value || "native";
+        }
+
+        function isExternalPaymentMethod() {
+            const method = getSelectedPaymentMethod();
+            return method === "bip21" || method === "psbt";
+        }
+
+        function updateCheckoutInvoiceUI() {
             const invoice = currentInvoice;
-            const amountEl = document.getElementById("bip21-invoice-amount");
-            const expiryEl = document.getElementById("bip21-invoice-expiry");
-            const idEl = document.getElementById("bip21-invoice-id");
-            const itemsEl = document.getElementById("bip21-invoice-items");
+            const amountEl = document.getElementById("checkout-invoice-amount");
+            const expiryEl = document.getElementById("checkout-invoice-expiry");
+            const idEl = document.getElementById("checkout-invoice-id");
+            const itemsEl = document.getElementById("checkout-invoice-items");
 
             if (!invoice || !amountEl) return;
 
@@ -1301,9 +1568,12 @@
             if (invoice.status === "paid") {
                 expiryEl.textContent = "Paid";
                 expiryEl.className = "text-emerald-400 font-medium";
-            } else if (invoice.status === "open" && remaining > 0) {
+            } else if (invoice.status === "open" && remaining != null && remaining > 0) {
                 expiryEl.textContent = `Expires in ${formatCountdown(remaining)}`;
                 expiryEl.className = "text-amber-400 font-medium tabular-nums";
+            } else if (invoice.status === "open" && remaining === null) {
+                expiryEl.textContent = "Awaiting invoice…";
+                expiryEl.className = "text-slate-400 font-medium";
             } else {
                 expiryEl.textContent = "Invoice expired";
                 expiryEl.className = "text-red-400 font-medium";
@@ -1324,18 +1594,18 @@
             }
         }
 
-        function stopBip21Monitoring() {
+        function stopCheckoutMonitoring() {
             stopBip21Countdown();
             stopBip21PaymentPoll();
         }
 
-        function hideBip21PaymentStatus() {
-            const el = document.getElementById("bip21-payment-status");
+        function hideCheckoutPaymentStatus() {
+            const el = document.getElementById("checkout-payment-status");
             if (el) el.classList.add("hidden");
         }
 
-        function updateBip21PaymentStatusUI(state, tx) {
-            const el = document.getElementById("bip21-payment-status");
+        function updateCheckoutPaymentStatusUI(state, tx) {
+            const el = document.getElementById("checkout-payment-status");
             if (!el) return;
 
             el.classList.remove("hidden");
@@ -1403,7 +1673,11 @@
             if (!data.success) throw new Error(data.error || "Failed to load merchant data");
 
             if (data.open_invoice) {
-                currentInvoice = data.open_invoice;
+                const incoming = data.open_invoice;
+                const sameInvoice = !currentInvoice || currentInvoice.id === incoming.id;
+                if (sameInvoice || incoming.status === "open") {
+                    currentInvoice = incoming;
+                }
             }
 
             const matchingTx = (data.recent_received || []).find(tx => tx.invoice_match === "match");
@@ -1414,10 +1688,9 @@
             return { data, matchingTx };
         }
 
-        async function pollBip21PaymentStatus() {
-            const panel = document.getElementById("bip21-panel");
-            const toggle = document.getElementById("bip21-toggle");
-            if (!panel || panel.classList.contains("hidden") || !toggle?.checked) {
+        async function pollCheckoutPaymentStatus() {
+            const section = document.getElementById("external-payment-section");
+            if (!section || section.classList.contains("hidden") || !isExternalPaymentMethod()) {
                 stopBip21PaymentPoll();
                 return;
             }
@@ -1427,12 +1700,17 @@
                 return;
             }
 
-            if (currentInvoice?.status === "expired" || getInvoiceSecondsRemaining(currentInvoice) <= 0) {
-                if (currentInvoice?.status === "open") {
+            if (!currentInvoice) {
+                return;
+            }
+
+            const remaining = getInvoiceSecondsRemaining(currentInvoice);
+            if (currentInvoice.status === "expired" || (currentInvoice.status === "open" && remaining != null && remaining <= 0)) {
+                if (currentInvoice.status === "open") {
                     currentInvoice = { ...currentInvoice, status: "expired" };
                 }
-                updateBip21InvoiceUI();
-                updateBip21PaymentStatusUI("expired");
+                updateCheckoutInvoiceUI();
+                updateCheckoutPaymentStatusUI("expired");
                 stopBip21PaymentPoll();
                 return;
             }
@@ -1442,37 +1720,38 @@
 
                 if (currentInvoice?.status === "paid" || data.open_invoice?.status === "paid") {
                     const paidTx = matchingTx || (data.recent_received || []).find(tx => tx.txid === currentInvoice?.paid_txid);
-                    updateBip21PaymentStatusUI("paid", paidTx);
-                    updateBip21InvoiceUI();
+                    updateCheckoutPaymentStatusUI("paid", paidTx);
+                    updateCheckoutInvoiceUI();
                     stopBip21PaymentPoll();
                     return;
                 }
 
-                updateBip21PaymentStatusUI("watching");
+                updateCheckoutPaymentStatusUI("watching");
             } catch (e) {
                 addLog("Payment status poll error: " + e.message, "error");
             }
         }
 
-        function startBip21PaymentPoll() {
+        function startCheckoutPaymentPoll() {
             stopBip21PaymentPoll();
-            updateBip21PaymentStatusUI("watching");
-            pollBip21PaymentStatus();
-            bip21PaymentPollInterval = setInterval(pollBip21PaymentStatus, 2500);
+            updateCheckoutPaymentStatusUI("watching");
+            pollCheckoutPaymentStatus();
+            bip21PaymentPollInterval = setInterval(pollCheckoutPaymentStatus, 2500);
         }
 
         function startBip21Countdown() {
             stopBip21Countdown();
-            updateBip21InvoiceUI();
+            updateCheckoutInvoiceUI();
             bip21CountdownTimer = setInterval(() => {
                 if (!currentInvoice || currentInvoice.status !== "open") {
                     stopBip21Countdown();
                     return;
                 }
-                updateBip21InvoiceUI();
-                if (getInvoiceSecondsRemaining(currentInvoice) <= 0) {
+                updateCheckoutInvoiceUI();
+                const remaining = getInvoiceSecondsRemaining(currentInvoice);
+                if (remaining != null && remaining <= 0) {
                     currentInvoice = { ...currentInvoice, status: "expired" };
-                    updateBip21InvoiceUI();
+                    updateCheckoutInvoiceUI();
                     stopBip21Countdown();
                 }
             }, 1000);
@@ -1519,9 +1798,9 @@
                 const data = await res.json();
                 if (data.success) {
                     currentInvoice = data.invoice;
-                    stopBip21Monitoring();
-                    updateBip21PaymentStatusUI("paid", tx);
-                    updateBip21InvoiceUI();
+                    stopCheckoutMonitoring();
+                    updateCheckoutPaymentStatusUI("paid", tx);
+                    updateCheckoutInvoiceUI();
 
                     if (cart.length) {
                         cart = [];
@@ -1790,21 +2069,71 @@
             }
         }
 
-        // --- BIP21 Payment Option (external wallet, not enabled by default) ---
-        function toggleBip21Mode() {
-            const checkbox = document.getElementById("bip21-toggle");
-            const panel = document.getElementById("bip21-panel");
+        // --- Checkout payment methods: native / BIP21 / PSBT ---
+        function setPaymentMethod() {
+            const method = getSelectedPaymentMethod();
+            const externalSection = document.getElementById("external-payment-section");
+            const bip21Panel = document.getElementById("bip21-panel");
+            const psbtPanel = document.getElementById("psbt-panel");
             const payBtn = document.getElementById("btn-pay");
 
-            if (checkbox.checked) {
-                panel.classList.remove("hidden");
-                if (payBtn) payBtn.style.display = "none";
-                generateBip21Request();
-            } else {
-                panel.classList.add("hidden");
+            if (method === "native") {
+                externalSection?.classList.add("hidden");
+                bip21Panel?.classList.add("hidden");
+                psbtPanel?.classList.add("hidden");
                 if (payBtn) payBtn.style.display = "";
                 stopBip21PaymentPoll();
-                hideBip21PaymentStatus();
+                hideCheckoutPaymentStatus();
+                return;
+            }
+
+            externalSection?.classList.remove("hidden");
+            if (payBtn) payBtn.style.display = "none";
+            updateCheckoutInvoiceUI();
+            startBip21Countdown();
+            startCheckoutPaymentPoll();
+
+            if (method === "bip21") {
+                bip21Panel?.classList.remove("hidden");
+                psbtPanel?.classList.add("hidden");
+                generateBip21Request();
+            } else if (method === "psbt") {
+                bip21Panel?.classList.add("hidden");
+                psbtPanel?.classList.remove("hidden");
+                loadPsbtExport();
+            }
+        }
+
+        async function loadPsbtExport() {
+            const totalSats = getCartTotal();
+            const psbtEl = document.getElementById("psbt-base64");
+            const metaEl = document.getElementById("psbt-meta");
+            if (!totalSats || !psbtEl) return;
+
+            psbtEl.textContent = "Building unsigned PSBT…";
+            if (metaEl) metaEl.textContent = "";
+
+            try {
+                const res = await fetch("/api/shop/psbt", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ total_sats: totalSats })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || "PSBT export failed");
+
+                const psbt = data.psbt;
+                psbtEl.textContent = psbt.psbt_base64;
+                if (metaEl) {
+                    metaEl.innerHTML = `
+                        ${psbt.input_count} input(s) · ${psbt.output_count} output(s) ·
+                        fee ~${Number(psbt.fee_sat).toLocaleString()} sats
+                    `;
+                }
+                addLog("PSBT exported for external signing", "success");
+            } catch (e) {
+                psbtEl.textContent = "Error: " + e.message;
+                addLog("PSBT export failed: " + e.message, "error");
             }
         }
 
@@ -1822,9 +2151,7 @@
 
             const uriEl = document.getElementById("bip21-uri");
             uriEl.textContent = uri;
-            updateBip21InvoiceUI();
-            startBip21Countdown();
-            startBip21PaymentPoll();
+            updateCheckoutInvoiceUI();
 
             const qrContainer = document.getElementById("bip21-qr");
             qrContainer.innerHTML = "";
@@ -1901,8 +2228,9 @@
             });
 
             // Initial state message
-            console.log("%c[Satoshi Snacks] Demo ready. Load a testnet WIF to begin.", "color:#64748b");
-            addLog("Welcome! Import your testnet wallet to unlock the shop.");
+            switchWalletImportTab("wif");
+            console.log("%c[Satoshi Snacks] Demo ready. Import a testnet WIF or xpub to begin.", "color:#64748b");
+            addLog("Welcome! Import a testnet WIF or watch-only xpub to unlock the shop.");
         }
 
         window.onload = init;
