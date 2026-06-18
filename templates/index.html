@@ -287,12 +287,28 @@
 
                     <div id="bip21-panel" class="hidden mt-4 p-4 bg-slate-950 border border-slate-700 rounded-2xl">
                         <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2">BIP21 Payment Request</div>
+
+                        <div id="bip21-invoice-summary" class="mb-3 p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-slate-400">Invoice</span>
+                                <span id="bip21-invoice-id" class="mono text-slate-500"></span>
+                            </div>
+                            <div class="mt-1 flex items-baseline justify-between gap-2">
+                                <span id="bip21-invoice-amount" class="font-semibold text-white tabular-nums"></span>
+                                <span id="bip21-invoice-expiry" class="text-amber-400 font-medium tabular-nums"></span>
+                            </div>
+                            <div id="bip21-invoice-items" class="mt-1 text-slate-500"></div>
+                        </div>
+
                         <div id="bip21-qr" class="flex justify-center mb-3"></div>
                         <div class="text-[10px] text-slate-400 mb-1">Tap or copy the URI below into a compatible wallet:</div>
                         <div id="bip21-uri" onclick="copyToClipboard(this.textContent, this)"
                              class="mono text-xs bg-slate-900 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                        <div id="bip21-payment-status" class="hidden mt-3 p-3 rounded-xl border text-xs"></div>
+
                         <div class="mt-3 text-[10px] text-slate-500">
-                            The amount is locked for this order. After broadcasting from your wallet, use the Merchant view to confirm receipt.
+                            URI includes <span class="text-slate-400">time</span> and <span class="text-slate-400">exp</span> (BIP21 extensions).
+                            Payment status updates automatically — no need to open Merchant view.
                         </div>
                         <button onclick="showMerchantMonitor()"
                                 class="mt-3 w-full text-xs py-2 rounded-2xl border border-slate-600 hover:bg-slate-800 font-medium flex items-center justify-center gap-2">
@@ -516,6 +532,20 @@
                     <div id="merchant-balance-btc" class="text-sm text-emerald-300/80 mono"></div>
                 </div>
 
+                <!-- Open invoice -->
+                <div id="merchant-invoice-panel" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="uppercase text-[10px] tracking-[1px] text-amber-400">Open invoice</div>
+                        <span id="merchant-invoice-status" class="text-[10px] px-2 py-0.5 rounded-full border border-amber-500/30 text-amber-300"></span>
+                    </div>
+                    <div class="mt-1 flex items-baseline justify-between gap-2">
+                        <span id="merchant-invoice-amount" class="font-semibold text-white tabular-nums text-lg"></span>
+                        <span id="merchant-invoice-expiry" class="text-xs text-amber-300 tabular-nums"></span>
+                    </div>
+                    <div id="merchant-invoice-items" class="mt-1 text-[11px] text-slate-400"></div>
+                    <div id="merchant-invoice-match-hint" class="mt-2 text-[10px] text-slate-500"></div>
+                </div>
+
                 <!-- Recent incoming -->
                 <div>
                     <div class="flex items-center justify-between mb-2 px-0.5">
@@ -550,6 +580,9 @@
         let confirmationTimer = null;
         let merchantRefreshInterval = null;
         let merchantOlderTxExpanded = false;
+        let currentInvoice = null;
+        let bip21CountdownTimer = null;
+        let bip21PaymentPollInterval = null;
         let qrStream = null;
         let qrAnimationFrame = null;
 
@@ -904,6 +937,31 @@
                 feeBtcEl.textContent = "";
             }
 
+            // Create a time-limited invoice for BIP21 exp + merchant matching
+            const itemsForApi = cart.map(i => ({
+                id: i.id,
+                name: i.name,
+                qty: i.qty,
+                price_sat: i.price_sat
+            }));
+            try {
+                const invRes = await fetch("/api/shop/invoice", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ total_sats: total, items: itemsForApi })
+                });
+                const invData = await invRes.json();
+                if (invData.success) {
+                    currentInvoice = invData.invoice;
+                } else {
+                    currentInvoice = null;
+                    addLog("Invoice creation failed: " + (invData.error || "unknown"), "error");
+                }
+            } catch (e) {
+                currentInvoice = null;
+                addLog("Invoice creation failed: " + e.message, "error");
+            }
+
             // Show section
             const co = document.getElementById("checkout-section");
             co.classList.remove("hidden");
@@ -914,8 +972,20 @@
             document.getElementById("btn-pay").innerHTML = `<i class="fas fa-bolt"></i><span class="ml-2">Confirm &amp; Pay in Bitcoin</span>`;
         }
 
+        async function clearCurrentInvoice() {
+            currentInvoice = null;
+            stopBip21Monitoring();
+            hideBip21PaymentStatus();
+            try {
+                await fetch("/api/shop/invoice", { method: "DELETE" });
+            } catch (e) {
+                addLog("Failed to clear invoice: " + e.message, "error");
+            }
+        }
+
         function cancelCheckout() {
             document.getElementById("checkout-section").classList.add("hidden");
+            clearCurrentInvoice();
             // Clear fee estimate
             const feeSatsEl = document.getElementById("checkout-fee-sats");
             const feeBtcEl = document.getElementById("checkout-fee-btc");
@@ -977,6 +1047,22 @@
                 // Clear cart after successful purchase
                 cart = [];
                 renderCart();
+
+                // Native payment fulfilled the open invoice
+                if (currentInvoice) {
+                    try {
+                        await fetch("/api/shop/invoice/match", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ txid: tx.txid })
+                        });
+                    } catch (e) {
+                        addLog("Invoice match update failed: " + e.message, "error");
+                    }
+                    currentInvoice = null;
+                    stopBip21Monitoring();
+                    hideBip21PaymentStatus();
+                }
 
                 addLog(`Payment successful! TXID: ${tx.txid}`, "success");
 
@@ -1123,6 +1209,7 @@
             if (confirmationTimer) clearInterval(confirmationTimer);
             if (merchantRefreshInterval) clearInterval(merchantRefreshInterval);
             merchantRefreshInterval = null;
+            clearCurrentInvoice();
             document.getElementById("merchant-modal").classList.add("hidden");
 
             document.getElementById("checkout-section").classList.add("hidden");
@@ -1180,6 +1267,274 @@
             return new Date(tx.block_time * 1000) >= getStartOfToday();
         }
 
+        function formatInvoiceItems(items) {
+            if (!items || !items.length) return "snacks order";
+            return items.map(it => `${it.qty}× ${it.name}`).join(", ");
+        }
+
+        function formatCountdown(seconds) {
+            const s = Math.max(0, Number(seconds) || 0);
+            const mins = Math.floor(s / 60);
+            const secs = s % 60;
+            return `${mins}:${String(secs).padStart(2, "0")}`;
+        }
+
+        function getInvoiceSecondsRemaining(invoice) {
+            if (!invoice || !invoice.expires_at) return 0;
+            return Math.max(0, invoice.expires_at - Math.floor(Date.now() / 1000));
+        }
+
+        function updateBip21InvoiceUI() {
+            const invoice = currentInvoice;
+            const amountEl = document.getElementById("bip21-invoice-amount");
+            const expiryEl = document.getElementById("bip21-invoice-expiry");
+            const idEl = document.getElementById("bip21-invoice-id");
+            const itemsEl = document.getElementById("bip21-invoice-items");
+
+            if (!invoice || !amountEl) return;
+
+            amountEl.textContent = `${Number(invoice.amount_sat).toLocaleString()} sats`;
+            idEl.textContent = `#${invoice.id}`;
+            itemsEl.textContent = formatInvoiceItems(invoice.items);
+
+            const remaining = getInvoiceSecondsRemaining(invoice);
+            if (invoice.status === "paid") {
+                expiryEl.textContent = "Paid";
+                expiryEl.className = "text-emerald-400 font-medium";
+            } else if (invoice.status === "open" && remaining > 0) {
+                expiryEl.textContent = `Expires in ${formatCountdown(remaining)}`;
+                expiryEl.className = "text-amber-400 font-medium tabular-nums";
+            } else {
+                expiryEl.textContent = "Invoice expired";
+                expiryEl.className = "text-red-400 font-medium";
+            }
+        }
+
+        function stopBip21Countdown() {
+            if (bip21CountdownTimer) {
+                clearInterval(bip21CountdownTimer);
+                bip21CountdownTimer = null;
+            }
+        }
+
+        function stopBip21PaymentPoll() {
+            if (bip21PaymentPollInterval) {
+                clearInterval(bip21PaymentPollInterval);
+                bip21PaymentPollInterval = null;
+            }
+        }
+
+        function stopBip21Monitoring() {
+            stopBip21Countdown();
+            stopBip21PaymentPoll();
+        }
+
+        function hideBip21PaymentStatus() {
+            const el = document.getElementById("bip21-payment-status");
+            if (el) el.classList.add("hidden");
+        }
+
+        function updateBip21PaymentStatusUI(state, tx) {
+            const el = document.getElementById("bip21-payment-status");
+            if (!el) return;
+
+            el.classList.remove("hidden");
+
+            if (state === "watching") {
+                el.className = "mt-3 p-3 rounded-xl border text-xs bg-amber-500/10 border-amber-500/30 text-amber-200";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-spinner fa-spin text-amber-400"></i>
+                        <span class="font-medium">Watching for payment…</span>
+                    </div>
+                    <div class="mt-1 text-[10px] text-amber-200/80">
+                        Waiting for an on-chain payment matching this invoice amount.
+                    </div>
+                `;
+                return;
+            }
+
+            if (state === "paid") {
+                const confLabel = tx?.confirmed
+                    ? (tx.confirmations > 0 ? `${tx.confirmations} confirmation${tx.confirmations > 1 ? "s" : ""}` : "confirmed")
+                    : "unconfirmed (in mempool)";
+                const shortTxid = tx?.txid && tx.txid.length > 20
+                    ? tx.txid.slice(0, 10) + "…" + tx.txid.slice(-8)
+                    : (tx?.txid || "");
+
+                el.className = "mt-3 p-3 rounded-xl border text-xs bg-emerald-500/10 border-emerald-500/30 text-emerald-200";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle text-emerald-400"></i>
+                        <span class="font-semibold text-emerald-300">Payment received!</span>
+                    </div>
+                    <div class="mt-1 text-[11px] text-emerald-100/90">
+                        Invoice matched — ${Number(tx?.received_sat || currentInvoice?.amount_sat || 0).toLocaleString()} sats received.
+                    </div>
+                    <div class="mt-1 text-[10px] text-emerald-200/80">${confLabel}</div>
+                    ${tx?.txid ? `
+                        <div class="mt-2 mono text-[10px] text-slate-400 break-all">${shortTxid}</div>
+                        <a href="${tx.mempool_url}" target="_blank"
+                           class="mt-1 inline-flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300">
+                            View on mempool.space <i class="fas fa-external-link-alt text-[9px]"></i>
+                        </a>
+                    ` : ""}
+                `;
+                return;
+            }
+
+            if (state === "expired") {
+                el.className = "mt-3 p-3 rounded-xl border text-xs bg-red-500/10 border-red-500/30 text-red-200";
+                el.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-hourglass-end text-red-400"></i>
+                        <span class="font-medium">Invoice expired</span>
+                    </div>
+                    <div class="mt-1 text-[10px] text-red-200/80">
+                        No matching payment was detected before the deadline. Create a new checkout to try again.
+                    </div>
+                `;
+            }
+        }
+
+        async function fetchAndProcessMerchantInfo() {
+            const res = await fetch("/api/merchant/info");
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Failed to load merchant data");
+
+            if (data.open_invoice) {
+                currentInvoice = data.open_invoice;
+            }
+
+            const matchingTx = (data.recent_received || []).find(tx => tx.invoice_match === "match");
+            if (matchingTx && data.open_invoice && data.open_invoice.status === "open") {
+                await markInvoiceMatched(matchingTx.txid, matchingTx);
+            }
+
+            return { data, matchingTx };
+        }
+
+        async function pollBip21PaymentStatus() {
+            const panel = document.getElementById("bip21-panel");
+            const toggle = document.getElementById("bip21-toggle");
+            if (!panel || panel.classList.contains("hidden") || !toggle?.checked) {
+                stopBip21PaymentPoll();
+                return;
+            }
+
+            if (currentInvoice?.status === "paid") {
+                stopBip21PaymentPoll();
+                return;
+            }
+
+            if (currentInvoice?.status === "expired" || getInvoiceSecondsRemaining(currentInvoice) <= 0) {
+                if (currentInvoice?.status === "open") {
+                    currentInvoice = { ...currentInvoice, status: "expired" };
+                }
+                updateBip21InvoiceUI();
+                updateBip21PaymentStatusUI("expired");
+                stopBip21PaymentPoll();
+                return;
+            }
+
+            try {
+                const { data, matchingTx } = await fetchAndProcessMerchantInfo();
+
+                if (currentInvoice?.status === "paid" || data.open_invoice?.status === "paid") {
+                    const paidTx = matchingTx || (data.recent_received || []).find(tx => tx.txid === currentInvoice?.paid_txid);
+                    updateBip21PaymentStatusUI("paid", paidTx);
+                    updateBip21InvoiceUI();
+                    stopBip21PaymentPoll();
+                    return;
+                }
+
+                updateBip21PaymentStatusUI("watching");
+            } catch (e) {
+                addLog("Payment status poll error: " + e.message, "error");
+            }
+        }
+
+        function startBip21PaymentPoll() {
+            stopBip21PaymentPoll();
+            updateBip21PaymentStatusUI("watching");
+            pollBip21PaymentStatus();
+            bip21PaymentPollInterval = setInterval(pollBip21PaymentStatus, 2500);
+        }
+
+        function startBip21Countdown() {
+            stopBip21Countdown();
+            updateBip21InvoiceUI();
+            bip21CountdownTimer = setInterval(() => {
+                if (!currentInvoice || currentInvoice.status !== "open") {
+                    stopBip21Countdown();
+                    return;
+                }
+                updateBip21InvoiceUI();
+                if (getInvoiceSecondsRemaining(currentInvoice) <= 0) {
+                    currentInvoice = { ...currentInvoice, status: "expired" };
+                    updateBip21InvoiceUI();
+                    stopBip21Countdown();
+                }
+            }, 1000);
+        }
+
+        function renderMerchantInvoicePanel(invoice) {
+            const panel = document.getElementById("merchant-invoice-panel");
+            if (!panel) return;
+
+            if (!invoice || invoice.status === "paid") {
+                panel.classList.add("hidden");
+                return;
+            }
+
+            panel.classList.remove("hidden");
+            document.getElementById("merchant-invoice-amount").textContent =
+                `${Number(invoice.amount_sat).toLocaleString()} sats`;
+            document.getElementById("merchant-invoice-items").textContent =
+                formatInvoiceItems(invoice.items);
+
+            const statusEl = document.getElementById("merchant-invoice-status");
+            const expiryEl = document.getElementById("merchant-invoice-expiry");
+            const hintEl = document.getElementById("merchant-invoice-match-hint");
+            const remaining = invoice.seconds_remaining ?? getInvoiceSecondsRemaining(invoice);
+
+            if (invoice.status === "open" && remaining > 0) {
+                statusEl.textContent = "Awaiting payment";
+                expiryEl.textContent = `Expires in ${formatCountdown(remaining)}`;
+                hintEl.textContent = "Matching payments with the exact invoice amount are highlighted below.";
+            } else {
+                statusEl.textContent = "Expired";
+                expiryEl.textContent = "No longer accepting payment";
+                hintEl.textContent = "Payments with the right amount but outside the invoice window are marked as late.";
+            }
+        }
+
+        async function markInvoiceMatched(txid, tx) {
+            try {
+                const res = await fetch("/api/shop/invoice/match", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ txid })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentInvoice = data.invoice;
+                    stopBip21Monitoring();
+                    updateBip21PaymentStatusUI("paid", tx);
+                    updateBip21InvoiceUI();
+
+                    if (cart.length) {
+                        cart = [];
+                        renderCart();
+                    }
+
+                    addLog(`Invoice matched to payment ${txid}`, "success");
+                }
+            } catch (e) {
+                addLog("Invoice match failed: " + e.message, "error");
+            }
+        }
+
         function renderMerchantTxRow(tx) {
             const amount = Number(tx.received_sat).toLocaleString();
             const btcAmount = (tx.received_btc || 0).toFixed(8);
@@ -1209,8 +1564,18 @@
                 } catch (e) {}
             }
 
+            let rowClass = "bg-slate-800/70 border border-slate-700";
+            let matchBadge = "";
+            if (tx.invoice_match === "match") {
+                rowClass = "bg-emerald-500/10 border border-emerald-500/40";
+                matchBadge = `<span class="inline-flex items-center gap-1 text-[10px] text-emerald-300 font-medium"><i class="fas fa-check-circle"></i> Matches open order</span>`;
+            } else if (tx.invoice_match === "amount_match_late") {
+                rowClass = "bg-amber-500/10 border border-amber-500/40";
+                matchBadge = `<span class="inline-flex items-center gap-1 text-[10px] text-amber-300 font-medium"><i class="fas fa-clock"></i> Amount match (late)</span>`;
+            }
+
             return `
-                <div class="bg-slate-800/70 border border-slate-700 rounded-xl px-3 py-1.5">
+                <div class="${rowClass} rounded-xl px-3 py-1.5">
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
                             <span class="font-semibold tabular-nums text-emerald-300">${amount}</span>
@@ -1218,6 +1583,7 @@
                             <span class="ml-1 text-[10px] text-slate-500 mono">${btcAmount} tBTC</span>
                         </div>
                         <div class="text-right shrink-0">
+                            ${matchBadge ? `<div class="mb-0.5">${matchBadge}</div>` : ""}
                             ${feeStr ? `<div class="text-[10px] text-slate-400">fee ${feeStr}</div>` : ''}
                             <a href="${tx.mempool_url}" target="_blank" class="text-[9px] text-orange-400 hover:text-orange-300 hover:underline mono">mempool</a>
                         </div>
@@ -1256,9 +1622,7 @@
             }
 
             try {
-                const res = await fetch("/api/merchant/info");
-                const data = await res.json();
-                if (!data.success) throw new Error(data.error || "Failed to load merchant data");
+                const { data } = await fetchAndProcessMerchantInfo();
 
                 const addrEl = document.getElementById("merchant-address");
                 addrEl.textContent = data.address;
@@ -1266,6 +1630,8 @@
                 document.getElementById("merchant-balance-sats").textContent = Number(data.balance_sat || 0).toLocaleString();
                 document.getElementById("merchant-balance-btc").textContent =
                     (data.balance_btc || 0).toFixed(8) + " tBTC";
+
+                renderMerchantInvoicePanel(currentInvoice || data.open_invoice);
 
                 const received = data.recent_received || [];
                 const todayTxs = received.filter(isTxFromToday);
@@ -1437,6 +1803,8 @@
             } else {
                 panel.classList.add("hidden");
                 if (payBtn) payBtn.style.display = "";
+                stopBip21PaymentPoll();
+                hideBip21PaymentStatus();
             }
         }
 
@@ -1444,13 +1812,19 @@
             const totalSats = getCartTotal();
             if (!totalSats) return;
 
+            const now = Math.floor(Date.now() / 1000);
+            const createdAt = currentInvoice?.created_at || now;
+            const expiresAt = currentInvoice?.expires_at || (now + 15 * 60);
             const btc = (totalSats / 100_000_000).toFixed(8);
             const label = encodeURIComponent("Satoshi Snacks");
-            const message = encodeURIComponent("Payment for snacks order");
-            const uri = `bitcoin:${MERCHANT}?amount=${btc}&label=${label}&message=${message}`;
+            const message = encodeURIComponent(formatInvoiceItems(cart.map(i => ({ qty: i.qty, name: i.name }))));
+            const uri = `bitcoin:${MERCHANT}?amount=${btc}&time=${createdAt}&exp=${expiresAt}&label=${label}&message=${message}`;
 
             const uriEl = document.getElementById("bip21-uri");
             uriEl.textContent = uri;
+            updateBip21InvoiceUI();
+            startBip21Countdown();
+            startBip21PaymentPoll();
 
             const qrContainer = document.getElementById("bip21-qr");
             qrContainer.innerHTML = "";
@@ -1501,17 +1875,8 @@
         }
 
         function showMerchantMonitor() {
-            // Close checkout and open the merchant view for the user to verify incoming tx
-            cancelCheckout();
-            setTimeout(() => {
-                const merchantBtn = document.querySelector('button[onclick*="showMerchantModal"]');
-                if (merchantBtn) {
-                    merchantBtn.click();
-                } else {
-                    // fallback: directly call if function exists
-                    if (typeof showMerchantModal === "function") showMerchantModal();
-                }
-            }, 150);
+            // Keep checkout + open invoice alive while verifying payment in merchant view
+            showMerchantModal();
         }
 
         function initProductsAndCart() {

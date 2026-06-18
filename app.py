@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 import requests
@@ -16,6 +17,7 @@ REQUIRED_CONFIRMATIONS = 5
 SHOP_MERCHANT_ADDRESS = "tb1ql7y0k5xct73ksaq03wrtn6pfvu6fktrxm8p4qj"
 SHOP_SNACK_PRICE_SAT = 10_000  # All snacks cost exactly this for simplicity
 MERCHANT_WIF = "cQaKzNNXuXUeAzbRrg6QWatqGZddLVeeC6Sgb1cTwTiCVrA4y19g"  # for merchant monitoring demo (read-only view)
+INVOICE_TTL_SECONDS = 15 * 60
 
 
 def get_wallet_name():
@@ -137,6 +139,43 @@ def get_wallet_info():
         "utxo_count": len(formatted_utxos),
         "utxos": formatted_utxos,
     }
+
+
+def get_open_invoice():
+    """Return the session invoice, marking it expired when past exp."""
+    invoice = session.get("open_invoice")
+    if not invoice:
+        return None
+    if invoice.get("status") == "open" and int(time.time()) > invoice.get("expires_at", 0):
+        invoice = {**invoice, "status": "expired"}
+        session["open_invoice"] = invoice
+    return invoice
+
+
+def evaluate_invoice_match(received_sat, block_time, invoice):
+    """
+    Compare an incoming merchant payment against the open invoice.
+    Returns: None | 'match' | 'amount_match_late'
+    """
+    if not invoice or invoice.get("status") != "open":
+        return None
+    if received_sat != invoice.get("amount_sat"):
+        return None
+
+    created_at = invoice.get("created_at", 0)
+    expires_at = invoice.get("expires_at", 0)
+    now = int(time.time())
+
+    if block_time is not None:
+        if block_time < created_at:
+            return None
+        if block_time > expires_at:
+            return "amount_match_late"
+        return "match"
+
+    if now > expires_at:
+        return "amount_match_late"
+    return "match"
 
 
 def format_txid(raw_txid):
@@ -366,6 +405,65 @@ def transaction_status(txid):
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
+@app.route("/api/shop/invoice", methods=["POST"])
+def create_shop_invoice():
+    if not session.get("wallet_loaded"):
+        return jsonify({"success": False, "error": "Load a wallet before creating an invoice."}), 400
+
+    data = request.json or {}
+    items = data.get("items") or []
+
+    try:
+        total_sats = int(data.get("total_sats"))
+        if total_sats <= 0:
+            raise ValueError("Total must be greater than zero.")
+    except (TypeError, ValueError) as exc:
+        return jsonify({"success": False, "error": f"Invalid total: {exc}"}), 400
+
+    now = int(time.time())
+    invoice = {
+        "id": uuid.uuid4().hex[:12],
+        "amount_sat": total_sats,
+        "address": SHOP_MERCHANT_ADDRESS,
+        "created_at": now,
+        "expires_at": now + INVOICE_TTL_SECONDS,
+        "items": items,
+        "status": "open",
+        "paid_txid": None,
+    }
+    session["open_invoice"] = invoice
+    return jsonify({"success": True, "invoice": invoice})
+
+
+@app.route("/api/shop/invoice", methods=["GET"])
+def get_shop_invoice():
+    return jsonify({"success": True, "invoice": get_open_invoice()})
+
+
+@app.route("/api/shop/invoice", methods=["DELETE"])
+def clear_shop_invoice():
+    session.pop("open_invoice", None)
+    return jsonify({"success": True})
+
+
+@app.route("/api/shop/invoice/match", methods=["POST"])
+def mark_shop_invoice_matched():
+    data = request.json or {}
+    txid = (data.get("txid") or "").strip()
+    invoice = session.get("open_invoice")
+    if not invoice or invoice.get("status") != "open":
+        return jsonify({"success": False, "error": "No open invoice to match."}), 400
+
+    invoice = {
+        **invoice,
+        "status": "paid",
+        "paid_txid": txid or None,
+        "paid_at": int(time.time()),
+    }
+    session["open_invoice"] = invoice
+    return jsonify({"success": True, "invoice": invoice})
+
+
 @app.route("/api/merchant/info", methods=["GET"])
 def merchant_info():
     """Read-only merchant monitor. Returns balance + recent incoming payments to the shop address."""
@@ -387,6 +485,7 @@ def merchant_info():
         except Exception:
             pass
 
+        open_invoice = get_open_invoice()
         recent_received = []
         for tx in raw_txs:
             received_sat = 0
@@ -404,6 +503,9 @@ def merchant_info():
             if confirmed and block_height and tip_height:
                 confirmations = max(0, tip_height - block_height + 1)
 
+            block_time = status.get("block_time")
+            invoice_match = evaluate_invoice_match(received_sat, block_time, open_invoice)
+
             recent_received.append({
                 "txid": tx["txid"],
                 "received_sat": received_sat,
@@ -413,18 +515,26 @@ def merchant_info():
                 "confirmed": confirmed,
                 "confirmations": confirmations,
                 "block_height": block_height,
-                "block_time": status.get("block_time"),
+                "block_time": block_time,
+                "invoice_match": invoice_match,
                 "mempool_url": f"{MEMPOOL_TX_URL}/{tx['txid']}",
             })
 
         # Keep a reasonable number for the UI (more for denser view)
         recent_received = recent_received[:25]
 
+        if open_invoice:
+            open_invoice = {
+                **open_invoice,
+                "seconds_remaining": max(0, open_invoice.get("expires_at", 0) - int(time.time())),
+            }
+
         return jsonify({
             "success": True,
             "address": address,
             "balance_sat": balance_sat,
             "balance_btc": balance_sat / 100_000_000,
+            "open_invoice": open_invoice,
             "recent_received": recent_received,
         })
     except Exception as exc:
