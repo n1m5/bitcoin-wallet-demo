@@ -190,6 +190,85 @@
                         </div>
                     </div>
                 </div>
+
+                <div id="wallet-descriptors-panel" class="hidden mt-2 bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                    <button type="button" onclick="toggleDescriptorsPanel()"
+                            class="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-800/60 transition">
+                        <div class="flex items-center gap-2 text-sm text-slate-200">
+                            <i class="fas fa-file-code text-orange-400 text-xs"></i>
+                            <span>Output descriptors <span class="text-slate-500 text-xs">(BIP380)</span></span>
+                        </div>
+                        <i id="descriptor-panel-chevron" class="fas fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+                    </button>
+                    <div id="wallet-descriptors-body" class="hidden px-4 pb-4 border-t border-slate-800">
+                        <p id="descriptor-panel-intro" class="mt-3 text-[11px] text-slate-500"></p>
+                        <div id="descriptor-account-fields" class="hidden mt-3 space-y-3">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[1px] text-slate-400 mb-1">Receive</div>
+                                <div id="descriptor-receive" onclick="copyDescriptor(this)"
+                                     class="mono text-[10px] bg-slate-950 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[1px] text-slate-400 mb-1">Change</div>
+                                <div id="descriptor-change" onclick="copyDescriptor(this)"
+                                     class="mono text-[10px] bg-slate-950 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[1px] text-slate-400 mb-1">Account</div>
+                                <div id="descriptor-account" onclick="copyDescriptor(this)"
+                                     class="mono text-[10px] bg-slate-950 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                            </div>
+                        </div>
+                        <div id="descriptor-address-fields" class="hidden mt-3 space-y-2">
+                            <div>
+                                <div class="text-[10px] uppercase tracking-[1px] text-slate-400 mb-1">Address descriptor</div>
+                                <div id="descriptor-address" onclick="copyDescriptor(this)"
+                                     class="mono text-[10px] bg-slate-950 border border-slate-700 p-3 rounded-xl break-all cursor-pointer hover:bg-slate-800 active:bg-slate-700"></div>
+                            </div>
+                            <div class="text-[10px] text-slate-500">
+                                Derivation path: <span id="descriptor-derivation-path" class="mono text-slate-400"></span>
+                            </div>
+                        </div>
+                        <div id="descriptor-validation" class="mt-3 text-[10px]"></div>
+                    </div>
+                </div>
+
+                <div id="wallet-labels-panel" class="hidden mt-2 bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                    <button type="button" onclick="toggleLabelsPanel()"
+                            class="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-800/60 transition">
+                        <div class="flex items-center gap-2 text-sm text-slate-200">
+                            <i class="fas fa-tags text-violet-400 text-xs"></i>
+                            <span>Wallet labels <span class="text-slate-500 text-xs">(BIP329)</span></span>
+                            <span id="wallet-labels-count" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400"></span>
+                        </div>
+                        <i id="labels-panel-chevron" class="fas fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+                    </button>
+                    <div id="wallet-labels-body" class="hidden px-4 pb-4 border-t border-slate-800">
+                        <p class="mt-3 text-[11px] text-slate-500">
+                            JSON Lines export for transactions, addresses, inputs, and outputs. Labels are added automatically when you pay at checkout.
+                        </p>
+                        <div id="wallet-labels-list" class="mt-3 space-y-1.5 max-h-40 overflow-auto pr-1"></div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" onclick="exportWalletLabels()"
+                                    class="text-[10px] px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300">
+                                <i class="fas fa-download text-[9px] mr-1"></i>Export JSONL
+                            </button>
+                            <button type="button" onclick="copyWalletLabelsExport()"
+                                    class="text-[10px] px-3 py-1.5 rounded-lg border border-slate-600 hover:bg-slate-800 text-slate-300">
+                                <i class="fas fa-copy text-[9px] mr-1"></i>Copy export
+                            </button>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-[10px] uppercase tracking-[1px] text-slate-400 mb-1">Import JSONL</label>
+                            <textarea id="wallet-labels-import" rows="3" placeholder='{"type":"tx","ref":"…","label":"…"}'
+                                      class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-xl text-[10px] focus:outline-none focus:border-violet-500 resize-y min-h-[4rem]"></textarea>
+                            <button type="button" onclick="importWalletLabels()"
+                                    class="mt-2 text-[10px] px-3 py-1.5 rounded-lg border border-violet-500/40 text-violet-300 hover:bg-violet-500/10">
+                                Import labels
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <p class="text-[11px] text-slate-500 mt-2 px-1">If your balance is zero, use a <a href="https://coinfaucet.eu/en/btc-testnet/" target="_blank" class="text-orange-400 hover:underline">testnet faucet</a> to get free tBTC.</p>
         </div>
@@ -427,6 +506,10 @@
                         <span>Payment broadcast successfully</span>
                     </div>
                     <div id="journey-order-summary" class="mt-3 text-sm text-slate-300"></div>
+                    <div id="journey-tx-label" class="hidden mt-2 inline-flex items-center gap-2 text-xs bg-violet-500/10 border border-violet-500/30 text-violet-200 rounded-xl px-3 py-1.5">
+                        <i class="fas fa-tag text-violet-300 text-[10px]"></i>
+                        <span id="journey-tx-label-text"></span>
+                    </div>
                 </div>
 
                 <!-- Educational journey steps -->
@@ -649,6 +732,9 @@
 
         let walletLoaded = false;
         let currentWallet = null; // {address, balance_sat, ...}
+        let walletLabels = [];
+        let labelsPanelOpen = false;
+        let labelsExportCache = "";
         let cart = []; // [{id, name, price_sat, qty}]
         let currentTxid = null;
         let confirmationTimer = null;
@@ -819,6 +905,7 @@
                 walletLoaded = true;
                 showWalletLoadedUI();
                 updateWalletUI();
+                await refreshWalletLabels();
                 enableShopUI();
                 addLog(`Watch-only wallet loaded: ${currentWallet.xpub_preview} — ${formatSats(currentWallet.balance_sat)}`, "success");
 
@@ -863,6 +950,7 @@
                 walletLoaded = true;
                 showWalletLoadedUI();
                 updateWalletUI();
+                await refreshWalletLabels();
                 enableShopUI();
                 addLog(`Wallet loaded: ${currentWallet.address} — ${formatSats(currentWallet.balance_sat)}`, "success");
 
@@ -922,6 +1010,8 @@
             }
 
             applyCheckoutPaymentUI();
+            updateDescriptorUI();
+            updateLabelsUI();
 
             // Pill (compact nav)
             const pill = document.getElementById("wallet-pill");
@@ -1283,6 +1373,12 @@
 
                 const tx = data.transaction;
                 currentTxid = tx.txid;
+                if (data.labels) {
+                    walletLabels = data.labels;
+                    updateLabelsUI();
+                } else {
+                    await refreshWalletLabels();
+                }
 
                 // Hide checkout
                 document.getElementById("checkout-section").classList.add("hidden");
@@ -1331,6 +1427,16 @@
             const itemSummary = (tx.items || []).map(it => `${it.qty}× ${it.name}`).join(", ") || "snacks";
             orderLine.innerHTML = `You paid <span class="font-semibold text-white">${tx.order_total_sat.toLocaleString()} sats</span> for <span class="font-semibold text-white">${itemSummary}</span>.`;
 
+            const txLabel = getLabelForRef("tx", tx.txid);
+            const labelWrap = document.getElementById("journey-tx-label");
+            const labelText = document.getElementById("journey-tx-label-text");
+            if (txLabel && labelWrap && labelText) {
+                labelText.textContent = txLabel.label;
+                labelWrap.classList.remove("hidden");
+            } else {
+                labelWrap?.classList.add("hidden");
+            }
+
             // Mempool link
             document.getElementById("journey-mempool-link").href = tx.mempool_url;
 
@@ -1342,20 +1448,33 @@
 
             // Inputs / Outputs
             const inEl = document.getElementById("journey-inputs");
-            inEl.innerHTML = (tx.inputs || []).map(inp => `
+            inEl.innerHTML = (tx.inputs || []).map(inp => {
+                const inputLabel = getLabelForRef("input", `${inp.txid}:${inp.vout}`);
+                const labelBadge = inputLabel
+                    ? `<span class="ml-1 text-violet-300">· ${inputLabel.label}</span>`
+                    : "";
+                return `
                 <div class="flex justify-between gap-2 border-b border-slate-800 pb-1 last:border-none last:pb-0">
-                    <span class="mono text-slate-400 break-all">${inp.txid}:${inp.vout}</span>
+                    <span class="mono text-slate-400 break-all">${inp.txid}:${inp.vout}${labelBadge}</span>
                     <span class="shrink-0 font-medium">${inp.value_btc} tBTC</span>
                 </div>
-            `).join("") || "<div class='text-slate-500'>—</div>";
+            `;
+            }).join("") || "<div class='text-slate-500'>—</div>";
 
             const outEl = document.getElementById("journey-outputs");
-            outEl.innerHTML = (tx.outputs || []).map(out => `
+            outEl.innerHTML = (tx.outputs || []).map((out, index) => {
+                const vout = out.vout ?? index;
+                const outputLabel = getLabelForRef("output", `${tx.txid}:${vout}`);
+                const labelBadge = outputLabel
+                    ? `<span class="ml-1 text-violet-300">· ${outputLabel.label}</span>`
+                    : "";
+                return `
                 <div class="flex justify-between gap-2 border-b border-slate-800 pb-1 last:border-none last:pb-0">
-                    <span class="mono text-slate-400 break-all">${out.address}${out.is_change ? ' <span class="text-emerald-400">(change)</span>' : ''}</span>
+                    <span class="mono text-slate-400 break-all">${out.address}${out.is_change ? ' <span class="text-emerald-400">(change)</span>' : ''}${labelBadge}</span>
                     <span class="shrink-0 font-medium">${out.value_btc} tBTC</span>
                 </div>
-            `).join("") || "<div class='text-slate-500'>—</div>";
+            `;
+            }).join("") || "<div class='text-slate-500'>—</div>";
 
             // Start confirmation polling in journey panel
             startJourneyConfirmationPolling(tx.txid);
@@ -1451,7 +1570,10 @@
             cart = [];
             currentWallet = null;
             walletLoaded = false;
+            walletLabels = [];
+            labelsExportCache = "";
             currentTxid = null;
+            fetch("/api/wallet/labels", { method: "DELETE" }).catch(() => {});
             if (confirmationTimer) clearInterval(confirmationTimer);
             if (merchantRefreshInterval) clearInterval(merchantRefreshInterval);
             merchantRefreshInterval = null;
@@ -1463,6 +1585,13 @@
 
             document.getElementById("wallet-form").classList.remove("hidden");
             document.getElementById("wallet-loaded-banner").classList.add("hidden");
+            document.getElementById("wallet-descriptors-panel")?.classList.add("hidden");
+            document.getElementById("wallet-descriptors-body")?.classList.add("hidden");
+            document.getElementById("descriptor-panel-chevron")?.classList.remove("rotate-180");
+            document.getElementById("wallet-labels-panel")?.classList.add("hidden");
+            document.getElementById("wallet-labels-body")?.classList.add("hidden");
+            document.getElementById("labels-panel-chevron")?.classList.remove("rotate-180");
+            labelsPanelOpen = false;
             document.getElementById("wallet-pill").style.display = "none";
             document.getElementById("shop-balance-pill").style.display = "none";
             switchWalletImportTab("wif");
@@ -1790,6 +1919,13 @@
 
         async function markInvoiceMatched(txid, tx) {
             try {
+                const itemsForApi = cart.map(i => ({
+                    id: i.id,
+                    name: i.name,
+                    qty: i.qty,
+                    price_sat: i.price_sat
+                }));
+
                 const res = await fetch("/api/shop/invoice/match", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1801,6 +1937,17 @@
                     stopCheckoutMonitoring();
                     updateCheckoutPaymentStatusUI("paid", tx);
                     updateCheckoutInvoiceUI();
+
+                    try {
+                        await fetch("/api/wallet/labels/from-payment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ txid, items: itemsForApi })
+                        });
+                        await refreshWalletLabels();
+                    } catch (e) {
+                        addLog("BIP329 label update failed: " + e.message, "error");
+                    }
 
                     if (cart.length) {
                         cart = [];
@@ -2180,6 +2327,198 @@
             } else {
                 loadAndGenerate();
             }
+        }
+
+        let descriptorsPanelOpen = false;
+
+        function getLabelForRef(type, ref) {
+            return walletLabels.find(item => item.type === type && item.ref === ref) || null;
+        }
+
+        function truncateLabelRef(ref, max = 28) {
+            if (!ref || ref.length <= max) return ref;
+            return ref.slice(0, 12) + "…" + ref.slice(-10);
+        }
+
+        async function refreshWalletLabels() {
+            if (!walletLoaded) {
+                walletLabels = [];
+                updateLabelsUI();
+                return;
+            }
+            try {
+                const res = await fetch("/api/wallet/labels");
+                const data = await res.json();
+                if (data.success) {
+                    walletLabels = data.labels || [];
+                    updateLabelsUI();
+                }
+            } catch (e) {
+                addLog("Failed to load wallet labels: " + e.message, "error");
+            }
+        }
+
+        function toggleLabelsPanel() {
+            const body = document.getElementById("wallet-labels-body");
+            const chevron = document.getElementById("labels-panel-chevron");
+            if (!body) return;
+            labelsPanelOpen = !labelsPanelOpen;
+            body.classList.toggle("hidden", !labelsPanelOpen);
+            chevron?.classList.toggle("rotate-180", labelsPanelOpen);
+        }
+
+        function updateLabelsUI() {
+            const panel = document.getElementById("wallet-labels-panel");
+            const listEl = document.getElementById("wallet-labels-list");
+            const countEl = document.getElementById("wallet-labels-count");
+
+            if (!panel || !walletLoaded) {
+                panel?.classList.add("hidden");
+                return;
+            }
+
+            panel.classList.remove("hidden");
+            if (countEl) countEl.textContent = `${walletLabels.length}`;
+
+            if (!listEl) return;
+            if (!walletLabels.length) {
+                listEl.innerHTML = `<div class="text-[11px] text-slate-500 py-2 text-center border border-dashed border-slate-700 rounded-xl">No labels yet. Complete a checkout to auto-label the payment.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = walletLabels.map(item => `
+                <div class="flex items-start justify-between gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
+                    <div class="min-w-0">
+                        <div class="text-[10px] uppercase tracking-wide text-violet-300">${item.type}</div>
+                        <div class="text-[11px] text-slate-200 truncate">${item.label || "—"}</div>
+                        <div class="mono text-[9px] text-slate-500 truncate">${truncateLabelRef(item.ref)}</div>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        async function exportWalletLabels() {
+            try {
+                const res = await fetch("/api/wallet/labels/export");
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || "Export failed");
+                labelsExportCache = data.content || "";
+                const blob = new Blob([labelsExportCache], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "satoshi-snacks-labels.jsonl";
+                link.click();
+                URL.revokeObjectURL(url);
+                addLog(`Exported ${data.count || 0} BIP329 label(s)`, "success");
+            } catch (e) {
+                addLog("Label export failed: " + e.message, "error");
+            }
+        }
+
+        async function copyWalletLabelsExport() {
+            try {
+                if (!labelsExportCache) {
+                    const res = await fetch("/api/wallet/labels/export");
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || "Export failed");
+                    labelsExportCache = data.content || "";
+                }
+                await navigator.clipboard.writeText(labelsExportCache);
+                addLog("BIP329 export copied to clipboard", "success");
+            } catch (e) {
+                addLog("Copy label export failed: " + e.message, "error");
+            }
+        }
+
+        async function importWalletLabels() {
+            const input = document.getElementById("wallet-labels-import");
+            const content = input?.value?.trim();
+            if (!content) {
+                alert("Paste JSON Lines label data first.");
+                return;
+            }
+            try {
+                const res = await fetch("/api/wallet/labels/import", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || "Import failed");
+                walletLabels = data.labels || [];
+                labelsExportCache = "";
+                updateLabelsUI();
+                if (input) input.value = "";
+                addLog(`Imported ${data.imported || 0} BIP329 label(s)`, "success");
+            } catch (e) {
+                addLog("Label import failed: " + e.message, "error");
+                alert("Import failed: " + e.message);
+            }
+        }
+
+        function toggleDescriptorsPanel() {
+            const body = document.getElementById("wallet-descriptors-body");
+            const chevron = document.getElementById("descriptor-panel-chevron");
+            if (!body) return;
+            descriptorsPanelOpen = !descriptorsPanelOpen;
+            body.classList.toggle("hidden", !descriptorsPanelOpen);
+            chevron?.classList.toggle("rotate-180", descriptorsPanelOpen);
+        }
+
+        function updateDescriptorUI() {
+            const panel = document.getElementById("wallet-descriptors-panel");
+            const accountFields = document.getElementById("descriptor-account-fields");
+            const addressFields = document.getElementById("descriptor-address-fields");
+            const intro = document.getElementById("descriptor-panel-intro");
+            const validation = document.getElementById("descriptor-validation");
+            const descriptors = currentWallet?.descriptors;
+
+            if (!panel || !walletLoaded || !descriptors) {
+                panel?.classList.add("hidden");
+                return;
+            }
+
+            panel.classList.remove("hidden");
+
+            if (descriptors.type === "account") {
+                accountFields?.classList.remove("hidden");
+                addressFields?.classList.add("hidden");
+                if (intro) {
+                    intro.textContent = "Checksummed wpkh descriptors for this watch-only account. Tap a line to copy into Electrum, Sparrow, or Bitcoin Core.";
+                }
+                const receiveEl = document.getElementById("descriptor-receive");
+                const changeEl = document.getElementById("descriptor-change");
+                const accountEl = document.getElementById("descriptor-account");
+                if (receiveEl) receiveEl.textContent = descriptors.receive || "";
+                if (changeEl) changeEl.textContent = descriptors.change || "";
+                if (accountEl) accountEl.textContent = descriptors.account || "";
+            } else {
+                accountFields?.classList.add("hidden");
+                addressFields?.classList.remove("hidden");
+                if (intro) {
+                    intro.textContent = "Single-address wpkh descriptor for this imported key. Account-level descriptors need a seed or account xpub.";
+                }
+                const addressEl = document.getElementById("descriptor-address");
+                const pathEl = document.getElementById("descriptor-derivation-path");
+                if (addressEl) addressEl.textContent = descriptors.address_descriptor || "";
+                if (pathEl) pathEl.textContent = descriptors.derivation_path || currentWallet.derivation_path || "";
+            }
+
+            if (validation) {
+                if (descriptors.validated) {
+                    validation.className = "mt-3 text-[10px] text-emerald-400 flex items-center gap-1.5";
+                    validation.innerHTML = `<i class="fas fa-check-circle"></i><span>Descriptor matches loaded address ${descriptors.validated_address || currentWallet.address}</span>`;
+                } else {
+                    validation.className = "mt-3 text-[10px] text-amber-400 flex items-center gap-1.5";
+                    validation.innerHTML = `<i class="fas fa-exclamation-triangle"></i><span>Descriptor could not be validated against the loaded address.</span>`;
+                }
+            }
+        }
+
+        function copyDescriptor(el) {
+            if (!el?.textContent) return;
+            copyToClipboard(el.textContent, el);
         }
 
         function copyToClipboard(text, el) {
