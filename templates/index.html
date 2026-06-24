@@ -7,177 +7,435 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-        body { font-family: 'DM Sans', sans-serif; }
-        .mono { font-family: 'JetBrains Mono', monospace; }
-        .shop-card { transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
-        .shop-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+        :root {
+            --bg: #07080d;
+            --surface: rgba(18, 20, 28, 0.88);
+            --surface-2: rgba(24, 27, 38, 0.95);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.14);
+            --text: #f4f4f5;
+            --muted: #9498a8;
+            --accent: #f97316;
+            --accent-glow: rgba(249, 115, 22, 0.22);
+            --success: #34d399;
+            --radius: 1.125rem;
+            --radius-lg: 1.5rem;
+            --nav-h: 3.75rem;
+            --dock-h: 4.5rem;
+        }
+
+        * { -webkit-tap-highlight-color: transparent; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Outfit', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+        }
+        .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+        .ambient {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(249, 115, 22, 0.12), transparent 55%),
+                radial-gradient(ellipse 60% 40% at 100% 20%, rgba(52, 211, 153, 0.06), transparent 50%),
+                radial-gradient(ellipse 50% 30% at 0% 80%, rgba(139, 92, 246, 0.05), transparent 45%);
+        }
+
+        .app-shell { position: relative; z-index: 1; }
+        .app-nav {
+            position: sticky; top: 0; z-index: 50;
+            height: var(--nav-h);
+            border-bottom: 1px solid var(--border);
+            background: rgba(7, 8, 13, 0.82);
+            backdrop-filter: blur(16px) saturate(1.4);
+        }
+        .app-main {
+            max-width: 72rem;
+            margin: 0 auto;
+            padding: 1.25rem 1rem 6rem;
+        }
+        @media (min-width: 640px) { .app-main { padding: 2rem 1.5rem 3rem; } }
+        @media (min-width: 1024px) { .app-main { padding-bottom: 3rem; } }
+
+        .surface-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(12px);
+        }
+        .surface-inset {
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .step-rail {
+            display: flex; gap: 0.5rem; overflow-x: auto;
+            padding-bottom: 0.25rem; scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .step-rail::-webkit-scrollbar { display: none; }
+        .step-pill {
+            flex: 0 0 auto;
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            border-radius: 9999px;
+            font-size: 0.75rem; font-weight: 500;
+            color: var(--muted);
+            border: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            white-space: nowrap;
+        }
+        .step-pill .step-num {
+            width: 1.375rem; height: 1.375rem;
+            border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.65rem; font-weight: 700;
+            background: rgba(255,255,255,0.06);
+        }
+        .step-pill.active {
+            color: var(--text);
+            border-color: rgba(249, 115, 22, 0.35);
+            background: rgba(249, 115, 22, 0.08);
+        }
+        .step-pill.active .step-num {
+            background: var(--accent);
+            color: #fff;
+        }
+        .step-pill.done { color: #a7f3d0; border-color: rgba(52, 211, 153, 0.25); }
+        .step-pill.done .step-num { background: rgba(52, 211, 153, 0.2); color: var(--success); }
+
+        .seg-control {
+            display: flex; gap: 0.25rem; padding: 0.25rem;
+            background: rgba(0,0,0,0.35);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .seg-btn {
+            flex: 1; min-height: 2.75rem;
+            padding: 0.625rem 1rem;
+            border-radius: calc(var(--radius) - 0.25rem);
+            font-size: 0.8125rem; font-weight: 600;
+            color: var(--muted);
+            transition: all 0.15s ease;
+        }
+        .seg-btn:hover { color: var(--text); }
+        .seg-btn.active-wif {
+            color: #6ee7b7;
+            background: rgba(52, 211, 153, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.25);
+        }
+        .seg-btn.active-xpub {
+            color: #7dd3fc;
+            background: rgba(56, 189, 248, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.25);
+        }
+
+        .input-field {
+            width: 100%; padding: 0.875rem 1rem;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            color: var(--text);
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: rgba(249, 115, 22, 0.45);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .btn-primary {
+            min-height: 2.75rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 600; font-size: 0.9375rem;
+            background: linear-gradient(135deg, #fb923c, #ea580c);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+            transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+        }
+        .btn-primary:hover { filter: brightness(1.06); box-shadow: 0 6px 20px rgba(234, 88, 12, 0.4); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .btn-ghost {
+            min-height: 2.75rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 500;
+            border: 1px solid var(--border-strong);
+            color: var(--muted);
+            transition: all 0.12s;
+        }
+        .btn-ghost:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+
+        .btn-success {
+            min-height: 2.75rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            background: linear-gradient(135deg, #34d399, #059669);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
+            transition: transform 0.12s, filter 0.12s;
+        }
+        .btn-success:hover { filter: brightness(1.06); }
+        .btn-success:active { transform: scale(0.98); }
+
+        .btn-sky {
+            min-height: 2.75rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--radius);
+            font-weight: 600;
+            background: linear-gradient(135deg, #38bdf8, #0284c7);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+            transition: transform 0.12s, filter 0.12s;
+        }
+        .btn-sky:hover { filter: brightness(1.06); }
+        .btn-sky:active { transform: scale(0.98); }
+
+        .shop-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            transition: transform 0.18s ease, border-color 0.18s, box-shadow 0.18s;
+        }
+        @media (hover: hover) {
+            .shop-card:hover {
+                transform: translateY(-3px);
+                border-color: rgba(249, 115, 22, 0.3);
+                box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+            }
+        }
         .shop-card.adding {
             animation: shop-card-pop 380ms cubic-bezier(0.23, 1, 0.32, 1);
-            border-color: #34d399 !important;
+            border-color: rgba(52, 211, 153, 0.55) !important;
         }
         @keyframes shop-card-pop {
-            0%   { transform: scale(0.96); box-shadow: 0 0 0 0 rgb(52 211 153 / 0); }
-            35%  { transform: scale(1.022); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.12), 0 0 0 4px rgb(52 211 153 / 0.28); }
-            100% { transform: scale(1); box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); }
+            0%   { transform: scale(0.96); }
+            40%  { transform: scale(1.02); box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.2); }
+            100% { transform: scale(1); }
         }
-        .snack-icon { font-size: 2rem; }
-        .sold-out { filter: grayscale(0.6); }
-        .cart-item { transition: all 0.1s ease; }
-        .section-header { letter-spacing: -.025em; }
+        .snack-icon {
+            width: 2.75rem; height: 2.75rem;
+            border-radius: 0.875rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.35rem;
+            background: rgba(249, 115, 22, 0.12);
+            color: var(--accent);
+        }
+        .sold-out { filter: grayscale(0.55); opacity: 0.65; }
+
+        .cart-dock {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+            padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
+            background: rgba(7, 8, 13, 0.92);
+            border-top: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            transform: translateY(110%);
+            transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+        .cart-dock.visible { transform: translateY(0); }
+        @media (min-width: 1024px) { .cart-dock { display: none !important; } }
+
+        .cart-sidebar { position: sticky; top: calc(var(--nav-h) + 1rem); }
+        .cart-item { transition: background 0.12s; }
+
+        .payment-option {
+            display: flex; align-items: flex-start; gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: border-color 0.12s, background 0.12s;
+        }
+        .payment-option:has(input:checked) {
+            border-color: rgba(249, 115, 22, 0.4);
+            background: rgba(249, 115, 22, 0.06);
+        }
+        .payment-option input { accent-color: var(--accent); margin-top: 0.2rem; }
+
         .journey-step { position: relative; }
-        .journey-step:not(:last-child):before {
+        .journey-step:not(:last-child)::before {
             content: '';
             position: absolute;
-            left: 1.05rem;
-            top: 2.25rem;
-            bottom: -0.5rem;
+            left: 1.2rem; top: 2.5rem; bottom: -0.35rem;
             width: 2px;
-            background: #334155;
+            background: linear-gradient(180deg, rgba(249,115,22,0.35), transparent);
         }
-        .tx-detail { font-size: 0.8125rem; }
-        .stat-pill { background: #0f172a; border: 1px solid #1e2937; }
-        .demo-badge { font-size: 10px; letter-spacing: 0.5px; }
         .progress-fill { transition: width 420ms ease; }
+
+        .modal-sheet {
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        }
+        @media (min-width: 640px) {
+            .modal-sheet { border-radius: var(--radius-lg); }
+        }
+
+        .collapse-chevron { transition: transform 0.2s ease; }
+        .collapse-chevron.open { transform: rotate(180deg); }
+
+        .section-title {
+            font-size: 1.25rem; font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        @media (min-width: 640px) { .section-title { font-size: 1.375rem; } }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100">
+<body>
+    <div class="ambient" aria-hidden="true"></div>
+    <div class="app-shell">
     <!-- Top nav -->
-    <div class="border-b border-slate-800 bg-slate-900/70 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-5xl mx-auto px-6">
-            <div class="h-16 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-2xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <div>
-                        <div class="font-semibold tracking-tighter text-xl">Satoshi Snacks</div>
-                        <div class="text-[10px] text-slate-500 -mt-1">TESTNET DEMO • PAY WITH BITCOIN</div>
-                    </div>
+    <header class="app-nav">
+        <div class="max-w-6xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-500/25 to-orange-600/10 border border-orange-500/25 flex items-center justify-center text-orange-400 shrink-0">
+                    <i class="fas fa-bolt text-sm"></i>
                 </div>
+                <div class="min-w-0">
+                    <div class="font-semibold tracking-tight text-base sm:text-lg truncate">Satoshi Snacks</div>
+                    <div class="text-[10px] text-zinc-500 tracking-wide hidden xs:block">TESTNET · BITCOIN PAYMENTS</div>
+                </div>
+            </div>
 
-                <!-- Wallet pill -->
-                <div id="wallet-pill" 
-                     class="hidden items-center gap-2 bg-slate-900 border border-slate-700 rounded-2xl px-3 py-1.5 text-sm cursor-pointer hover:border-slate-600"
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button" id="wallet-pill-mobile"
+                        class="sm:hidden hidden items-center gap-1.5 surface-inset px-2 py-1.5 text-xs"
+                        onclick="showWalletModal()">
+                    <i class="fas fa-wallet text-emerald-400"></i>
+                    <span id="pill-balance-mobile" class="mono font-semibold text-white text-[11px]"></span>
+                </button>
+                <div id="wallet-pill"
+                     class="hidden sm:flex items-center gap-2 max-w-[14rem] lg:max-w-xs surface-inset px-2.5 py-1.5 text-sm cursor-pointer hover:border-orange-500/30 transition-colors"
                      onclick="showWalletModal()">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-wallet text-emerald-400"></i>
-                        <div>
-                            <span id="pill-address" class="mono text-emerald-300 text-xs"></span>
-                            <span id="pill-balance" class="ml-2 text-sm font-semibold text-white mono"></span>
-                        </div>
+                    <i class="fas fa-wallet text-emerald-400 text-xs shrink-0"></i>
+                    <div class="min-w-0 leading-tight">
+                        <div id="pill-address" class="mono text-emerald-300/90 text-[10px] truncate"></div>
+                        <div id="pill-balance" class="text-xs font-semibold text-white mono truncate"></div>
                     </div>
                     <button onclick="event.stopImmediatePropagation(); refreshWallet();"
-                            class="ml-1 px-2 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-600" title="Refresh balance">
+                            class="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/5 text-zinc-400" title="Refresh balance">
                         <i class="fas fa-sync text-[10px]"></i>
                     </button>
                 </div>
-
-                <div class="flex items-center gap-2 text-xs">
-                    <div class="px-2.5 py-1 rounded-xl bg-slate-800 border border-slate-700 text-slate-400 flex items-center gap-1">
-                        <i class="fas fa-info-circle"></i>
-                        <span>testnet only</span>
-                    </div>
-                </div>
+                <span class="hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium text-zinc-500 border border-white/8">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    testnet
+                </span>
             </div>
         </div>
-    </div>
+    </header>
 
-    <div class="max-w-5xl mx-auto px-6 py-8">
-        <!-- Hero / intro -->
-        <div class="flex items-end justify-between mb-8">
-            <div>
-                <h1 class="text-4xl font-semibold tracking-tighter section-header">Buy snacks.<br>Pay in bitcoin.</h1>
-                <p class="mt-2 text-slate-400 max-w-md">A simple demo of a real Bitcoin testnet payment flow — from your wallet to checkout to on-chain confirmation.</p>
-            </div>
-            <div class="hidden sm:block text-right">
-                <div class="demo-badge px-3 py-1 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 inline-flex items-center gap-1">
-                    <i class="fas fa-flask"></i>
-                    <span class="font-medium">DEMO MODE</span>
+    <main class="app-main">
+        <!-- Hero -->
+        <div class="mb-6 sm:mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                <div>
+                    <p class="text-xs font-medium text-orange-400/90 mb-2 flex items-center gap-1.5">
+                        <i class="fas fa-flask text-[10px]"></i> Interactive demo
+                    </p>
+                    <h1 class="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold tracking-tight leading-[1.1]">
+                        Buy snacks.<br class="hidden sm:block" />
+                        <span class="text-zinc-400 font-semibold">Pay in bitcoin.</span>
+                    </h1>
+                    <p class="mt-3 text-sm sm:text-base text-zinc-500 max-w-lg leading-relaxed">
+                        Real testnet payments — import a wallet, shop, checkout, and follow your transaction to confirmation.
+                    </p>
                 </div>
             </div>
+
+            <!-- Step progress -->
+            <nav class="step-rail mt-6" aria-label="Demo steps">
+                <div class="step-pill active" data-step="wallet"><span class="step-num">1</span>Wallet</div>
+                <div class="step-pill" data-step="shop"><span class="step-num">2</span>Shop</div>
+                <div class="step-pill" data-step="checkout"><span class="step-num">3</span>Checkout</div>
+                <div class="step-pill" data-step="journey"><span class="step-num">4</span>Confirm</div>
+            </nav>
         </div>
 
-        <!-- 1. WALLET SETUP -->
-        <div id="wallet-section" class="mb-10">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">1</div>
-                <h2 class="font-semibold text-xl tracking-tight">Import your testnet wallet</h2>
-            </div>
+        <!-- 1. WALLET -->
+        <section id="wallet-section" class="mb-8 sm:mb-10 scroll-mt-20">
+            <h2 class="section-title mb-4">Connect wallet</h2>
 
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6">
+            <div class="surface-card p-4 sm:p-6">
                 <div id="wallet-form">
-                    <div class="flex flex-wrap gap-2 mb-4">
+                    <div class="seg-control mb-5">
                         <button type="button" id="tab-import-wif" onclick="switchWalletImportTab('wif')"
-                                class="wallet-import-tab px-4 py-2 rounded-xl text-sm font-medium border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
-                            <i class="fas fa-key mr-1.5"></i>Private key (WIF)
+                                class="seg-btn active-wif">
+                            <i class="fas fa-key mr-1.5"></i>WIF key
                         </button>
                         <button type="button" id="tab-import-xpub" onclick="switchWalletImportTab('xpub')"
-                                class="wallet-import-tab px-4 py-2 rounded-xl text-sm font-medium border border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300">
-                            <i class="fas fa-eye mr-1.5"></i>Watch-only (xpub)
+                                class="seg-btn">
+                            <i class="fas fa-eye mr-1.5"></i>Watch-only
                         </button>
                     </div>
 
                     <div id="wallet-import-wif-panel">
                         <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                             <div class="md:col-span-3">
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Private Key (WIF)</label>
+                                <label class="block text-xs font-medium text-zinc-500 mb-2">Private key (WIF)</label>
                                 <div class="relative">
                                     <input id="private-key" type="password"
                                            value="cT6ZEeyc3LYuwh7gGVP6Wb7TNBzRHpNrtUYiCFsguRxkARVfqbxY"
-                                           class="mono w-full p-3 pr-11 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
-                                    <button type="button" onclick="toggleKeyVisibility()" 
-                                            class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                                        <i id="key-eye" class="fas fa-eye"></i>
+                                           class="input-field mono pr-11 text-sm">
+                                    <button type="button" onclick="toggleKeyVisibility()"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-300">
+                                        <i id="key-eye" class="fas fa-eye text-sm"></i>
                                     </button>
                                 </div>
-                                <p class="mt-1.5 text-[11px] text-slate-500">Testnet WIF only. Never use mainnet keys here.</p>
-                                <button type="button" onclick="startQRScan()" 
-                                        class="mt-2 text-xs px-3 py-1.5 rounded-2xl border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/15 flex items-center gap-2">
+                                <p class="mt-2 text-xs text-zinc-600">Testnet only — never paste mainnet keys.</p>
+                                <button type="button" onclick="startQRScan()"
+                                        class="mt-3 text-xs min-h-[2.5rem] px-3 rounded-xl border border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-2">
                                     <i class="fas fa-qrcode"></i>
-                                    <span>Scan QR code with camera</span>
+                                    <span>Scan QR with camera</span>
                                 </button>
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-xs font-medium text-slate-400 mb-1.5">Derivation Path</label>
+                                <label class="block text-xs font-medium text-zinc-500 mb-2">Derivation path</label>
                                 <input id="derivation-path" value="m/84'/1'/0'/0/0"
-                                       class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-emerald-500">
-                                <p class="mt-1.5 text-[11px] text-slate-500">BIP84 SegWit testnet</p>
+                                       class="input-field mono text-sm">
+                                <p class="mt-2 text-xs text-zinc-600">BIP84 SegWit · testnet</p>
                             </div>
                         </div>
 
-                        <div class="mt-4 flex gap-3">
+                        <div class="mt-5 flex flex-col sm:flex-row gap-3">
                             <button onclick="loadWallet()"
-                                    class="flex-1 md:flex-none px-8 py-3 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 transition rounded-2xl font-semibold flex items-center justify-center gap-2">
+                                    class="btn-success flex-1 sm:flex-none sm:min-w-[10rem] flex items-center justify-center gap-2">
                                 <i class="fas fa-key"></i>
-                                <span>Import Wallet</span>
+                                <span>Import wallet</span>
                             </button>
-                            <button onclick="useDemoWalletHint()" 
-                                    class="px-5 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-2xl text-sm">
+                            <button onclick="useDemoWalletHint()" class="btn-ghost text-sm">
                                 Use demo key
                             </button>
                         </div>
                     </div>
 
                     <div id="wallet-import-xpub-panel" class="hidden">
-                        <label class="block text-xs font-medium text-slate-400 mb-1.5">Account xpub / descriptor</label>
+                        <label class="block text-xs font-medium text-zinc-500 mb-2">Account xpub / descriptor</label>
                         <textarea id="xpub-input" rows="3"
                                   placeholder="[fingerprint/m/84'/1'/0']vpub..."
-                                  class="mono w-full p-3 bg-slate-950 border border-slate-700 rounded-2xl text-sm focus:outline-none focus:border-sky-500 resize-y min-h-[4.5rem]"></textarea>
-                        <p class="mt-1.5 text-[11px] text-slate-500">
-                            BIP84 testnet vpub or descriptor — your private key never leaves your wallet.
+                                  class="input-field mono text-sm resize-y min-h-[5rem]"></textarea>
+                        <p class="mt-2 text-xs text-zinc-600">
+                            BIP84 testnet vpub or descriptor — your private key stays in your wallet.
                         </p>
-                        <div class="mt-4 flex gap-3">
+                        <div class="mt-5">
                             <button onclick="loadXpubWallet()"
-                                    class="flex-1 md:flex-none px-8 py-3 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 transition rounded-2xl font-semibold flex items-center justify-center gap-2">
+                                    class="w-full sm:w-auto btn-sky flex items-center justify-center gap-2">
                                 <i class="fas fa-eye"></i>
-                                <span>Load watch-only wallet</span>
+                                <span>Load watch-only</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div id="wallet-loaded-banner" class="hidden mt-1 text-sm bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <div id="wallet-loaded-banner" class="hidden mt-4 text-sm rounded-xl px-4 py-3.5 flex items-start gap-3 border">
                     <i id="banner-icon" class="fas fa-check-circle"></i>
                     <div class="flex-1">
                         <div id="banner-title">Wallet imported. You can now shop and pay.</div>
@@ -191,16 +449,16 @@
                     </div>
                 </div>
 
-                <div id="wallet-descriptors-panel" class="hidden mt-2 bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                <div id="wallet-descriptors-panel" class="hidden mt-3 surface-inset overflow-hidden">
                     <button type="button" onclick="toggleDescriptorsPanel()"
-                            class="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-800/60 transition">
-                        <div class="flex items-center gap-2 text-sm text-slate-200">
+                            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition min-h-[3rem]">
+                        <div class="flex items-center gap-2 text-sm text-zinc-200">
                             <i class="fas fa-file-code text-orange-400 text-xs"></i>
-                            <span>Output descriptors <span class="text-slate-500 text-xs">(BIP380)</span></span>
+                            <span>Descriptors <span class="text-zinc-600 text-xs">BIP380</span></span>
                         </div>
-                        <i id="descriptor-panel-chevron" class="fas fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+                        <i id="descriptor-panel-chevron" class="fas fa-chevron-down text-zinc-500 text-xs collapse-chevron"></i>
                     </button>
-                    <div id="wallet-descriptors-body" class="hidden px-4 pb-4 border-t border-slate-800">
+                    <div id="wallet-descriptors-body" class="hidden px-4 pb-4 border-t border-white/8">
                         <p id="descriptor-panel-intro" class="mt-3 text-[11px] text-slate-500"></p>
                         <div id="descriptor-account-fields" class="hidden mt-3 space-y-3">
                             <div>
@@ -233,17 +491,17 @@
                     </div>
                 </div>
 
-                <div id="wallet-labels-panel" class="hidden mt-2 bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+                <div id="wallet-labels-panel" class="hidden mt-3 surface-inset overflow-hidden">
                     <button type="button" onclick="toggleLabelsPanel()"
-                            class="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-slate-800/60 transition">
-                        <div class="flex items-center gap-2 text-sm text-slate-200">
+                            class="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition min-h-[3rem]">
+                        <div class="flex items-center gap-2 text-sm text-zinc-200">
                             <i class="fas fa-tags text-violet-400 text-xs"></i>
-                            <span>Wallet labels <span class="text-slate-500 text-xs">(BIP329)</span></span>
-                            <span id="wallet-labels-count" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400"></span>
+                            <span>Labels <span class="text-zinc-600 text-xs">BIP329</span></span>
+                            <span id="wallet-labels-count" class="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-zinc-500"></span>
                         </div>
-                        <i id="labels-panel-chevron" class="fas fa-chevron-down text-slate-500 text-xs transition-transform"></i>
+                        <i id="labels-panel-chevron" class="fas fa-chevron-down text-zinc-500 text-xs collapse-chevron"></i>
                     </button>
-                    <div id="wallet-labels-body" class="hidden px-4 pb-4 border-t border-slate-800">
+                    <div id="wallet-labels-body" class="hidden px-4 pb-4 border-t border-white/8">
                         <p class="mt-3 text-[11px] text-slate-500">
                             JSON Lines export for transactions, addresses, inputs, and outputs. Labels are added automatically when you pay at checkout.
                         </p>
@@ -270,154 +528,141 @@
                     </div>
                 </div>
             </div>
-            <p class="text-[11px] text-slate-500 mt-2 px-1">If your balance is zero, use a <a href="https://coinfaucet.eu/en/btc-testnet/" target="_blank" class="text-orange-400 hover:underline">testnet faucet</a> to get free tBTC.</p>
-        </div>
+            <p class="text-xs text-zinc-600 mt-3">
+                No funds? Grab tBTC from a <a href="https://coinfaucet.eu/en/btc-testnet/" target="_blank" class="text-orange-400 hover:underline">testnet faucet</a>.
+            </p>
+        </section>
 
-        <!-- 2. THE SHOP -->
-        <div id="shop-section">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">2</div>
-                    <h2 class="font-semibold text-xl tracking-tight">The Snack Shop</h2>
-                </div>
-                <div id="shop-balance-pill" class="hidden items-center gap-2 bg-slate-900 border border-slate-700 px-4 py-1.5 rounded-2xl text-sm">
-                    <span class="text-slate-400 text-xs tracking-wide">BALANCE</span>
-                    <span id="shop-balance" class="font-semibold mono text-white"></span>
+        <!-- 2. SHOP -->
+        <section id="shop-section" class="scroll-mt-20">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="section-title">Snack shop</h2>
+                <div id="shop-balance-pill" class="hidden flex items-center gap-2 surface-inset px-3 py-2 text-sm">
+                    <span class="text-zinc-500 text-[10px] font-medium uppercase tracking-wider">Balance</span>
+                    <span id="shop-balance" class="font-semibold mono text-white text-sm"></span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Products -->
-                <div class="lg:col-span-7">
-                    <div class="text-xs uppercase tracking-widest font-semibold text-slate-400 mb-2 px-1">Available — 10,000 sats each</div>
-                    <div id="products-available" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <!-- Populated by JS -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
+                <div class="lg:col-span-7 space-y-6">
+                    <div>
+                        <p class="text-xs font-medium text-zinc-500 mb-3">Available · 10,000 sats each</p>
+                        <div id="products-available" class="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
                     </div>
-
-                    <div class="mt-6">
-                        <div class="text-xs uppercase tracking-widest font-semibold text-slate-500 mb-2 px-1">Sold out</div>
-                        <div id="products-soldout" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <!-- Populated by JS -->
-                        </div>
+                    <div>
+                        <p class="text-xs font-medium text-zinc-600 mb-3">Sold out</p>
+                        <div id="products-soldout" class="grid grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4"></div>
                     </div>
                 </div>
 
-                <!-- Cart -->
-                <div class="lg:col-span-5">
-                    <div class="bg-slate-900 border border-slate-700 rounded-3xl p-5 h-full flex flex-col">
-                        <div class="flex items-center justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <i class="fas fa-shopping-cart text-orange-400"></i>
-                                <span class="font-semibold">Your Cart</span>
+                <!-- Desktop cart -->
+                <div class="hidden lg:block lg:col-span-5">
+                    <div class="cart-sidebar surface-card p-5 flex flex-col max-h-[calc(100dvh-var(--nav-h)-2rem)]">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-2 font-semibold">
+                                <i class="fas fa-shopping-bag text-orange-400"></i>
+                                <span>Your cart</span>
                             </div>
-                            <button onclick="clearCart()" 
-                                    class="text-xs px-3 py-1 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-400">Clear</button>
+                            <button onclick="clearCart()" class="text-xs px-3 py-1.5 rounded-lg btn-ghost !min-h-0 !py-1.5">Clear</button>
                         </div>
-
-                        <div id="cart-items" class="flex-1 space-y-2 text-sm overflow-auto pr-1 min-h-[120px]">
-                            <!-- JS rendered items -->
-                        </div>
-
-                        <div class="mt-auto pt-4 border-t border-slate-700">
-                            <div class="flex justify-between items-baseline mb-1 px-0.5">
-                                <span class="text-sm text-slate-400">Total due</span>
-                                <span id="cart-total-sats" class="font-semibold text-xl tabular-nums">0</span>
+                        <div id="cart-items" class="flex-1 space-y-2 text-sm overflow-auto pr-1 min-h-[8rem]"></div>
+                        <div class="mt-auto pt-4 border-t border-white/8">
+                            <div class="flex justify-between items-baseline mb-1">
+                                <span class="text-sm text-zinc-500">Total</span>
+                                <span id="cart-total-sats" class="font-bold text-2xl tabular-nums">0</span>
                             </div>
-                            <div id="cart-total-btc" class="text-xs text-slate-500 text-right mono mb-3">0.00000000 tBTC</div>
-
-                            <button onclick="proceedToCheckout()"
-                                    class="w-full py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition flex items-center justify-center gap-2"
-                                    id="btn-checkout">
-                                <i class="fas fa-arrow-right"></i>
-                                <span>Proceed to Checkout</span>
+                            <div id="cart-total-btc" class="text-xs text-zinc-600 text-right mono mb-4">0.00000000 tBTC</div>
+                            <button onclick="proceedToCheckout()" class="btn-primary w-full flex items-center justify-center gap-2" id="btn-checkout">
+                                <span>Checkout</span>
+                                <i class="fas fa-arrow-right text-sm"></i>
                             </button>
-                            <div class="text-[10px] text-center text-slate-500 mt-2">Prices fixed at 10,000 sats per item for this demo</div>
+                            <p class="text-[10px] text-center text-zinc-600 mt-3">Fixed demo pricing · 10k sats / item</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 3. CHECKOUT SECTION -->
-        <div id="checkout-section" class="hidden mt-8 scroll-mt-8">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="w-6 h-6 rounded bg-orange-500/20 text-orange-400 flex items-center justify-center text-xs font-bold">3</div>
-                <h2 class="font-semibold text-xl tracking-tight">Checkout</h2>
+            <!-- Mobile cart (inline, above dock) -->
+            <div class="lg:hidden mt-6 surface-card p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-semibold text-sm flex items-center gap-2"><i class="fas fa-shopping-bag text-orange-400"></i> Cart</span>
+                    <button onclick="clearCart()" class="text-xs text-zinc-500 hover:text-zinc-300">Clear</button>
+                </div>
+                <div id="cart-items-mobile" class="space-y-2 text-sm min-h-[3rem]"></div>
             </div>
+        </section>
 
-            <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                <div class="grid md:grid-cols-5 gap-6">
-                    <!-- Order summary -->
-                    <div class="md:col-span-3">
-                        <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2">Order Summary</div>
+        <!-- 3. CHECKOUT -->
+        <section id="checkout-section" class="hidden mt-8 sm:mt-10 scroll-mt-20">
+            <h2 class="section-title mb-4">Checkout</h2>
+
+            <div class="surface-card p-4 sm:p-6">
+                <div class="grid lg:grid-cols-5 gap-5 lg:gap-6">
+                    <div class="lg:col-span-3">
+                        <p class="text-xs font-medium text-zinc-500 mb-3">Order</p>
                         <div id="checkout-items" class="space-y-2 text-sm"></div>
-
-                        <div class="mt-4 pt-4 border-t border-slate-700 flex justify-between text-sm">
-                            <span class="text-slate-400">You pay</span>
-                            <span class="font-semibold">
-                                <span id="checkout-total-sats" class="tabular-nums"></span> sats
-                            </span>
+                        <div class="mt-4 pt-4 border-t border-white/8 flex justify-between items-baseline">
+                            <span class="text-zinc-500">You pay</span>
+                            <div class="text-right">
+                                <div class="font-bold text-xl tabular-nums"><span id="checkout-total-sats"></span> <span class="text-sm font-medium text-zinc-500">sats</span></div>
+                                <div id="checkout-total-btc" class="text-xs text-zinc-600 mono mt-0.5"></div>
+                            </div>
                         </div>
-                        <div id="checkout-total-btc" class="text-xs text-right text-slate-400 mono"></div>
                     </div>
 
-                    <!-- Payment info -->
-                    <div class="md:col-span-2 bg-slate-950 border border-slate-800 rounded-2xl p-4 text-sm">
-                        <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2.5">Bitcoin Payment</div>
-
-                        <div class="space-y-3">
+                    <div class="lg:col-span-2 surface-inset p-4 text-sm">
+                        <p class="text-xs font-medium text-zinc-500 mb-3">Payment details</p>
+                        <div class="space-y-3.5">
                             <div>
-                                <div class="text-xs text-slate-400">From your wallet</div>
-                                <div id="checkout-from" class="mono text-emerald-300 text-xs break-all mt-0.5"></div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">From</div>
+                                <div id="checkout-from" class="mono text-emerald-400/90 text-xs break-all"></div>
                             </div>
                             <div>
-                                <div class="text-xs text-slate-400">To (Snack Merchant)</div>
-                                <div id="checkout-to" class="mono text-orange-300 text-xs break-all mt-0.5"></div>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">To merchant</div>
+                                <div id="checkout-to" class="mono text-orange-400/90 text-xs break-all"></div>
                             </div>
                             <div>
-                                <div class="text-xs text-slate-400">Est. miner fee (normal)</div>
-                                <div class="flex justify-between text-xs mt-0.5">
-                                    <span id="checkout-fee-sats" class="font-medium tabular-nums text-amber-300"></span>
-                                    <span id="checkout-fee-btc" class="mono text-slate-400"></span>
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-600 mb-1">Miner fee (est.)</div>
+                                <div class="flex justify-between text-xs">
+                                    <span id="checkout-fee-sats" class="font-medium tabular-nums text-amber-400"></span>
+                                    <span id="checkout-fee-btc" class="mono text-zinc-600"></span>
                                 </div>
-                                <div class="text-[10px] text-slate-500">paid to miners • actual fee may vary slightly</div>
                             </div>
-                            <div id="checkout-broadcast-warning" class="pt-2 text-[11px] text-amber-400 flex gap-2 items-start">
-                                <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                            <div id="checkout-broadcast-warning" class="text-xs text-amber-400/90 flex gap-2 items-start surface-inset !bg-amber-500/5 !border-amber-500/20 p-3 rounded-xl">
+                                <i class="fas fa-info-circle mt-0.5 shrink-0"></i>
                                 <span id="checkout-broadcast-warning-text">This will create and broadcast a real transaction on Bitcoin testnet.</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Payment method: watch-only only (native for WIF imports is automatic) -->
-                <div id="checkout-payment-methods" class="hidden mt-4 pt-4 border-t border-slate-700">
-                    <div class="uppercase text-xs tracking-[1px] text-slate-400 mb-2">Payment method</div>
+                <div id="checkout-payment-methods" class="hidden mt-6 pt-6 border-t border-white/8">
+                    <p class="text-xs font-medium text-zinc-500 mb-3">Payment method</p>
                     <div class="space-y-2 text-sm">
-                        <label id="payment-method-native-wrap" class="hidden flex items-start gap-2 cursor-pointer">
-                            <input type="radio" name="payment-method" value="native" class="accent-orange-500 mt-0.5" checked onchange="setPaymentMethod()">
+                        <label id="payment-method-native-wrap" class="hidden payment-option">
+                            <input type="radio" name="payment-method" value="native" checked onchange="setPaymentMethod()">
                             <span>
-                                <span class="text-slate-200 font-medium">Native transaction</span>
-                                <span class="block text-[11px] text-slate-500">Build, sign &amp; broadcast in this demo</span>
+                                <span class="text-zinc-100 font-medium block">Native transaction</span>
+                                <span class="block text-xs text-zinc-500 mt-0.5">Build, sign &amp; broadcast in this demo</span>
                             </span>
                         </label>
-                        <label id="payment-method-bip21-wrap" class="flex items-start gap-2 cursor-pointer">
-                            <input type="radio" name="payment-method" value="bip21" class="accent-orange-500 mt-0.5" onchange="setPaymentMethod()">
+                        <label id="payment-method-bip21-wrap" class="payment-option">
+                            <input type="radio" name="payment-method" value="bip21" onchange="setPaymentMethod()">
                             <span>
-                                <span class="text-slate-200 font-medium">BIP21 payment request</span>
-                                <span class="block text-[11px] text-slate-500">QR / URI for a compatible external wallet</span>
+                                <span class="text-zinc-100 font-medium block">BIP21 payment request</span>
+                                <span class="block text-xs text-zinc-500 mt-0.5">QR / URI for an external wallet</span>
                             </span>
                         </label>
-                        <label id="payment-method-psbt-wrap" class="flex items-start gap-2 cursor-pointer">
-                            <input type="radio" name="payment-method" value="psbt" class="accent-orange-500 mt-0.5" onchange="setPaymentMethod()">
+                        <label id="payment-method-psbt-wrap" class="payment-option">
+                            <input type="radio" name="payment-method" value="psbt" onchange="setPaymentMethod()">
                             <span>
-                                <span class="text-slate-200 font-medium">PSBT export (BIP174)</span>
-                                <span class="block text-[11px] text-slate-500">Unsigned transaction for Electrum, Sparrow, etc.</span>
+                                <span class="text-zinc-100 font-medium block">PSBT export</span>
+                                <span class="block text-xs text-zinc-500 mt-0.5">Sign in Electrum, Sparrow, etc.</span>
                             </span>
                         </label>
                     </div>
 
-                    <div id="external-payment-section" class="hidden mt-4 p-4 bg-slate-950 border border-slate-700 rounded-2xl space-y-3">
+                    <div id="external-payment-section" class="hidden mt-4 p-4 surface-inset space-y-4">
                         <div id="checkout-invoice-summary" class="p-3 rounded-xl bg-slate-900 border border-slate-700 text-xs">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-slate-400">Invoice</span>
@@ -471,39 +716,31 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex gap-3">
-                    <button onclick="payForOrder()"
-                            class="flex-1 py-3.5 rounded-2xl bg-orange-600 hover:bg-orange-500 font-semibold flex items-center justify-center gap-2 text-base"
-                            id="btn-pay">
+                <div class="mt-6 flex flex-col-reverse sm:flex-row gap-3">
+                    <button onclick="cancelCheckout()" class="btn-ghost sm:px-8">Cancel</button>
+                    <button onclick="payForOrder()" class="btn-primary flex-1 flex items-center justify-center gap-2 text-base" id="btn-pay">
                         <i class="fas fa-bolt"></i>
-                        <span>Confirm &amp; Pay in Bitcoin</span>
+                        <span>Confirm &amp; pay</span>
                     </button>
-                    <button onclick="cancelCheckout()"
-                            class="px-6 py-3.5 rounded-2xl border border-slate-600 hover:bg-slate-800 font-medium">Cancel</button>
                 </div>
-                <div id="pay-error" class="hidden mt-3 text-sm text-red-400"></div>
+                <div id="pay-error" class="hidden mt-3 text-sm text-red-400 px-1"></div>
             </div>
-        </div>
+        </section>
 
-        <!-- 4. TRANSACTION JOURNEY -->
-        <div id="journey-section" class="hidden mt-8 scroll-mt-8">
-            <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-3">
-                    <div class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">4</div>
-                    <h2 class="font-semibold text-xl tracking-tight">Transaction Journey</h2>
-                </div>
-                <button onclick="backToShop()" 
-                        class="text-xs px-4 py-1.5 rounded-2xl border border-slate-700 hover:bg-slate-800 flex items-center gap-2">
-                    <i class="fas fa-store"></i> <span>Back to shop</span>
+        <!-- 4. JOURNEY -->
+        <section id="journey-section" class="hidden mt-8 sm:mt-10 scroll-mt-20">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 class="section-title">Transaction journey</h2>
+                <button onclick="backToShop()" class="btn-ghost !min-h-[2.25rem] !py-1.5 text-xs flex items-center gap-2">
+                    <i class="fas fa-store"></i> Back to shop
                 </button>
             </div>
 
-            <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6">
-                <!-- Thank you header -->
-                <div class="mb-5">
-                    <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 text-sm border border-emerald-500/30 px-3 py-1 rounded-2xl">
-                        <i class="fas fa-check"></i> 
-                        <span>Payment broadcast successfully</span>
+            <div class="surface-card p-4 sm:p-6">
+                <div class="mb-6">
+                    <div class="inline-flex items-center gap-2 bg-emerald-500/10 text-emerald-400 text-sm border border-emerald-500/25 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-check text-xs"></i>
+                        <span>Payment broadcast</span>
                     </div>
                     <div id="journey-order-summary" class="mt-3 text-sm text-slate-300"></div>
                     <div id="journey-tx-label" class="hidden mt-2 inline-flex items-center gap-2 text-xs bg-violet-500/10 border border-violet-500/30 text-violet-200 rounded-xl px-3 py-1.5">
@@ -601,32 +838,45 @@
                     </div>
                 </div>
 
-                <div class="mt-4 text-[11px] text-slate-500 flex items-center gap-2">
-                    <i class="fas fa-info-circle"></i> 
+                <div class="mt-4 text-xs text-zinc-600 flex items-center gap-2">
+                    <i class="fas fa-info-circle"></i>
                     <span>Demo waits for 5 confirmations. Real merchants often accept 1–6 depending on amount.</span>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- Footer info -->
-        <div class="mt-10 pt-6 border-t border-slate-800 text-xs text-slate-500 flex flex-col sm:flex-row gap-y-1 items-center justify-between">
-            <div>All payments use real Bitcoin testnet. Nothing is real money.</div>
-            <div class="flex items-center gap-3">
-                <button onclick="resetEverything()" class="hover:text-slate-300 underline">Reset demo</button>
-                <span class="text-slate-700 select-none">·</span>
-                <button onclick="showMerchantModal()"
-                        class="text-[10px] text-slate-600 hover:text-slate-400 active:text-slate-300 transition underline decoration-dotted underline-offset-2">
-                    Merchant view
-                </button>
+        <footer class="mt-12 pt-6 border-t border-white/8 text-xs text-zinc-600 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <p>Real Bitcoin testnet — not real money.</p>
+            <div class="flex items-center gap-4">
+                <button onclick="resetEverything()" class="hover:text-zinc-300 transition">Reset demo</button>
+                <button onclick="showMerchantModal()" class="hover:text-zinc-400 transition">Merchant view</button>
             </div>
+        </footer>
+    </main>
+
+    <!-- Mobile checkout dock -->
+    <div id="mobile-cart-dock" class="cart-dock lg:hidden">
+        <div class="max-w-6xl mx-auto flex items-center gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Cart total</div>
+                <div class="flex items-baseline gap-1.5">
+                    <span id="mobile-cart-total-sats" class="font-bold text-lg tabular-nums">0</span>
+                    <span class="text-xs text-zinc-500">sats</span>
+                </div>
+            </div>
+            <button onclick="proceedToCheckout()" id="btn-checkout-mobile" disabled
+                    class="btn-primary shrink-0 !min-h-[2.75rem] px-5 flex items-center gap-2">
+                Checkout <i class="fas fa-arrow-right text-xs"></i>
+            </button>
         </div>
     </div>
+    </div><!-- /.app-shell -->
 
-    <!-- QR Code Scanner for mobile private key import -->
+    <!-- QR scanner -->
     <div id="qr-scanner-modal" onclick="if (event.target.id === 'qr-scanner-modal') stopQRScan()"
-         class="hidden fixed inset-0 bg-black/95 z-[110] flex items-center justify-center p-4">
+         class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="event.stopImmediatePropagation()"
-             class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl">
+             class="modal-sheet w-full max-w-md surface-card overflow-hidden shadow-2xl sm:max-h-[90dvh]">
             <div class="px-4 py-3 border-b border-slate-700 flex items-center justify-between bg-slate-950/60">
                 <div class="flex items-center gap-2">
                     <i class="fas fa-qrcode text-emerald-400"></i>
@@ -653,11 +903,11 @@
         </div>
     </div>
 
-    <!-- Merchant monitor modal (subtle, opened from bottom button) -->
+    <!-- Merchant modal -->
     <div id="merchant-modal" onclick="if (event.target.id === 'merchant-modal') closeMerchantModal()"
-         class="hidden flex fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] items-center justify-center p-4">
+         class="hidden flex fixed inset-0 bg-black/75 backdrop-blur-sm z-[100] items-end sm:items-center justify-center p-0 sm:p-4">
         <div onclick="event.stopImmediatePropagation()"
-             class="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-2xl max-h-[82vh] flex flex-col shadow-2xl">
+             class="modal-sheet surface-card w-full max-w-2xl max-h-[88dvh] sm:max-h-[82vh] flex flex-col shadow-2xl">
             <!-- Header -->
             <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
                 <div>
@@ -808,28 +1058,44 @@
             const xpubPanel = document.getElementById("wallet-import-xpub-panel");
             if (!wifTab || !xpubTab || !wifPanel || !xpubPanel) return;
 
-            const active = ["border-emerald-500/40", "bg-emerald-500/10", "text-emerald-300"];
-            const inactive = ["border-slate-700", "text-slate-400", "hover:border-slate-600", "hover:text-slate-300"];
-
-            const setTabStyle = (el, isActive) => {
-                el.classList.remove(...active, ...inactive);
-                if (isActive) el.classList.add(...active);
-                else el.classList.add(...inactive);
-            };
+            wifTab.classList.remove("active-wif", "active-xpub");
+            xpubTab.classList.remove("active-wif", "active-xpub");
 
             if (tab === "xpub") {
                 wifPanel.classList.add("hidden");
                 xpubPanel.classList.remove("hidden");
-                setTabStyle(wifTab, false);
-                setTabStyle(xpubTab, true);
-                xpubTab.classList.remove("border-emerald-500/40", "bg-emerald-500/10", "text-emerald-300");
-                xpubTab.classList.add("border-sky-500/40", "bg-sky-500/10", "text-sky-300");
+                xpubTab.classList.add("active-xpub");
             } else {
                 xpubPanel.classList.add("hidden");
                 wifPanel.classList.remove("hidden");
-                setTabStyle(wifTab, true);
-                xpubTab.classList.remove("border-sky-500/40", "bg-sky-500/10", "text-sky-300");
-                setTabStyle(xpubTab, false);
+                wifTab.classList.add("active-wif");
+            }
+        }
+
+        function updateStepProgress(activeStep) {
+            const order = ["wallet", "shop", "checkout", "journey"];
+            const activeIndex = order.indexOf(activeStep);
+            if (activeIndex < 0) return;
+            document.querySelectorAll(".step-pill").forEach(pill => {
+                const step = pill.dataset.step;
+                const idx = order.indexOf(step);
+                pill.classList.remove("active", "done");
+                if (idx < activeIndex) pill.classList.add("done");
+                else if (idx === activeIndex) pill.classList.add("active");
+            });
+        }
+
+        function syncStepProgress() {
+            const journey = document.getElementById("journey-section");
+            const checkout = document.getElementById("checkout-section");
+            if (journey && !journey.classList.contains("hidden")) {
+                updateStepProgress("journey");
+            } else if (checkout && !checkout.classList.contains("hidden")) {
+                updateStepProgress("checkout");
+            } else if (walletLoaded) {
+                updateStepProgress("shop");
+            } else {
+                updateStepProgress("wallet");
             }
         }
 
@@ -993,34 +1259,44 @@
 
             if (banner) {
                 if (watchOnly) {
-                    banner.className = "mt-1 text-sm bg-sky-500/10 border border-sky-500/30 text-sky-200 rounded-2xl px-4 py-3 flex items-center gap-3";
+                    banner.className = "mt-4 text-sm bg-sky-500/10 border-sky-500/25 text-sky-100 rounded-xl px-4 py-3.5 flex items-start gap-3 border";
                     if (bannerTitle) bannerTitle.textContent = `Watch-only wallet loaded (${currentWallet.xpub_preview || "xpub"}).`;
-                    if (bannerIcon) bannerIcon.className = "fas fa-eye";
+                    if (bannerIcon) bannerIcon.className = "fas fa-eye text-sky-400 mt-0.5";
                     watchNote?.classList.remove("hidden");
-                    if (balanceRow) balanceRow.className = "mt-0.5 text-sky-100";
-                    if (refreshBtn) refreshBtn.className = "ml-3 underline hover:no-underline text-xs text-sky-200";
+                    if (balanceRow) balanceRow.className = "mt-1 text-sky-100/90";
+                    if (refreshBtn) refreshBtn.className = "ml-2 underline hover:no-underline text-xs text-sky-300";
                 } else {
-                    banner.className = "mt-1 text-sm bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-2xl px-4 py-3 flex items-center gap-3";
-                    if (bannerTitle) bannerTitle.textContent = "Wallet imported. You can now shop and pay.";
-                    if (bannerIcon) bannerIcon.className = "fas fa-check-circle";
+                    banner.className = "mt-4 text-sm bg-emerald-500/10 border-emerald-500/25 text-emerald-100 rounded-xl px-4 py-3.5 flex items-start gap-3 border";
+                    if (bannerTitle) bannerTitle.textContent = "Wallet connected — ready to shop.";
+                    if (bannerIcon) bannerIcon.className = "fas fa-check-circle text-emerald-400 mt-0.5";
                     watchNote?.classList.add("hidden");
-                    if (balanceRow) balanceRow.className = "mt-0.5 text-emerald-200";
-                    if (refreshBtn) refreshBtn.className = "ml-3 underline hover:no-underline text-xs text-emerald-300";
+                    if (balanceRow) balanceRow.className = "mt-1 text-emerald-200/90";
+                    if (refreshBtn) refreshBtn.className = "ml-2 underline hover:no-underline text-xs text-emerald-300";
                 }
             }
+
+            syncStepProgress();
 
             applyCheckoutPaymentUI();
             updateDescriptorUI();
             updateLabelsUI();
 
-            // Pill (compact nav)
+            // Nav wallet pills
             const pill = document.getElementById("wallet-pill");
-            pill.style.display = "flex";
+            const pillMobile = document.getElementById("wallet-pill-mobile");
+            if (pill) pill.style.display = "flex";
+            if (pillMobile) {
+                pillMobile.classList.remove("hidden");
+                pillMobile.classList.add("flex");
+            }
             const addrLabel = watchOnly
                 ? `👁 ${currentWallet.address.slice(0, 8)}…${currentWallet.address.slice(-4)}`
                 : currentWallet.address.slice(0, 10) + "..." + currentWallet.address.slice(-6);
             document.getElementById("pill-address").textContent = addrLabel;
-            document.getElementById("pill-balance").textContent = formatSats(currentWallet.balance_sat);
+            const balShort = formatSats(currentWallet.balance_sat);
+            document.getElementById("pill-balance").textContent = balShort;
+            const pillBalMobile = document.getElementById("pill-balance-mobile");
+            if (pillBalMobile) pillBalMobile.textContent = balShort;
 
             // Shop balance pill — prominent sats + smaller tBTC
             const shopPill = document.getElementById("shop-balance-pill");
@@ -1051,32 +1327,31 @@
             const sold = document.getElementById("products-soldout");
 
             avail.innerHTML = PRODUCTS.map(p => `
-                <div class="shop-card bg-slate-900 border border-slate-700 hover:border-orange-500/40 rounded-3xl p-4 flex flex-col" data-id="${p.id}">
-                    <div class="flex items-start justify-between">
-                        <div class="text-orange-400 snack-icon"><i class="fas ${p.icon}"></i></div>
+                <div class="shop-card p-4 flex flex-col h-full" data-id="${p.id}">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="snack-icon shrink-0"><i class="fas ${p.icon}"></i></div>
                         <div class="text-right">
-                            <div class="font-semibold tabular-nums">${(p.price_sat || SNACK_PRICE).toLocaleString()}</div>
-                            <div class="text-[10px] text-slate-500 -mt-0.5">sats</div>
+                            <div class="font-bold tabular-nums text-lg">${(p.price_sat || SNACK_PRICE).toLocaleString()}</div>
+                            <div class="text-[10px] text-zinc-600 -mt-0.5">sats</div>
                         </div>
                     </div>
-                    <div class="mt-3 font-semibold">${p.name}</div>
-                    <div class="text-xs text-slate-400 mt-0.5 flex-1">${p.desc}</div>
+                    <div class="mt-3 font-semibold text-zinc-100">${p.name}</div>
+                    <div class="text-xs text-zinc-500 mt-1 flex-1 leading-relaxed">${p.desc}</div>
                     <button onclick="addToCart('${p.id}')"
-                            class="mt-4 w-full py-2 text-sm rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-medium flex items-center justify-center gap-2">
-                        <i class="fas fa-plus"></i> Add to cart
+                            class="mt-4 w-full min-h-[2.75rem] py-2.5 text-sm rounded-xl bg-white/5 hover:bg-emerald-500/15 border border-white/10 hover:border-emerald-500/30 font-medium flex items-center justify-center gap-2 transition-colors active:scale-[0.98]">
+                        <i class="fas fa-plus text-xs"></i> Add
                     </button>
                 </div>
             `).join("");
 
             sold.innerHTML = SOLDOUT.map(p => `
-                <div class="shop-card sold-out bg-slate-900 border border-slate-700 rounded-3xl p-4 flex flex-col opacity-60">
+                <div class="shop-card sold-out p-4 flex flex-col">
                     <div class="flex items-start justify-between">
-                        <div class="text-slate-400 snack-icon"><i class="fas ${p.icon}"></i></div>
-                        <div class="px-2 py-0.5 rounded-full bg-slate-700 text-[10px] text-slate-300 self-start">SOLD OUT</div>
+                        <div class="snack-icon !bg-zinc-800 !text-zinc-500"><i class="fas ${p.icon}"></i></div>
+                        <span class="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] text-zinc-500 font-medium">Sold out</span>
                     </div>
-                    <div class="mt-3 font-semibold text-slate-300">${p.name}</div>
-                    <div class="text-xs text-slate-400 mt-0.5 flex-1">${p.desc}</div>
-                    <div class="mt-4 text-xs text-center text-slate-500 border border-dashed border-slate-700 py-2 rounded-2xl">Currently unavailable</div>
+                    <div class="mt-3 font-semibold text-zinc-500">${p.name}</div>
+                    <div class="text-xs text-zinc-600 mt-1 flex-1">${p.desc}</div>
                 </div>
             `).join("");
         }
@@ -1153,43 +1428,62 @@
             return cart.reduce((sum, item) => sum + (item.price_sat * item.qty), 0);
         }
 
+        function cartItemHtml(item) {
+            return `
+                <div class="cart-item surface-inset px-3 py-2.5 flex items-center gap-2 sm:gap-3">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-sm leading-tight truncate">${item.name}</div>
+                        <div class="text-[10px] text-zinc-500 mono">${item.price_sat.toLocaleString()} × ${item.qty}</div>
+                    </div>
+                    <div class="flex items-center gap-0.5 shrink-0">
+                        <button onclick="changeCartQty('${item.id}', -1)" class="w-8 h-8 rounded-lg border border-white/10 hover:bg-white/5 active:scale-95 text-sm">−</button>
+                        <div class="w-7 text-center tabular-nums font-semibold text-sm">${item.qty}</div>
+                        <button onclick="changeCartQty('${item.id}', 1)" class="w-8 h-8 rounded-lg border border-white/10 hover:bg-white/5 active:scale-95 text-sm">+</button>
+                    </div>
+                    <div class="text-right shrink-0 w-16 sm:w-20">
+                        <div class="font-semibold tabular-nums text-sm">${(item.price_sat * item.qty).toLocaleString()}</div>
+                    </div>
+                    <button onclick="removeFromCart('${item.id}')" class="w-8 h-8 flex items-center justify-center text-red-400/60 hover:text-red-400 shrink-0"><i class="fas fa-times text-xs"></i></button>
+                </div>
+            `;
+        }
+
+        const CART_EMPTY_HTML = `<div class="text-sm text-zinc-600 py-8 text-center border border-dashed border-white/10 rounded-xl">Cart is empty</div>`;
+
         function renderCart() {
             const container = document.getElementById("cart-items");
+            const mobileContainer = document.getElementById("cart-items-mobile");
             const totalSatsEl = document.getElementById("cart-total-sats");
             const totalBtcEl = document.getElementById("cart-total-btc");
+            const mobileTotalEl = document.getElementById("mobile-cart-total-sats");
             const btn = document.getElementById("btn-checkout");
+            const mobileBtn = document.getElementById("btn-checkout-mobile");
+            const dock = document.getElementById("mobile-cart-dock");
 
             if (!cart.length) {
-                container.innerHTML = `<div class="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-700 rounded-2xl">Cart is empty.<br>Add some snacks above.</div>`;
-                totalSatsEl.textContent = "0";
-                totalBtcEl.textContent = "0.00000000 tBTC";
-                btn.disabled = true;
+                if (container) container.innerHTML = CART_EMPTY_HTML;
+                if (mobileContainer) mobileContainer.innerHTML = CART_EMPTY_HTML;
+                if (totalSatsEl) totalSatsEl.textContent = "0";
+                if (totalBtcEl) totalBtcEl.textContent = "0.00000000 tBTC";
+                if (mobileTotalEl) mobileTotalEl.textContent = "0";
+                if (btn) btn.disabled = true;
+                if (mobileBtn) mobileBtn.disabled = true;
+                dock?.classList.remove("visible");
                 return;
             }
 
-            container.innerHTML = cart.map(item => `
-                <div class="cart-item bg-slate-800 border border-slate-700 rounded-2xl px-3 py-2.5 flex items-center gap-3">
-                    <div class="flex-1 min-w-0">
-                        <div class="font-medium leading-tight">${item.name}</div>
-                        <div class="text-[10px] text-emerald-400/80 mono">${item.price_sat.toLocaleString()} sats × ${item.qty}</div>
-                    </div>
-                    <div class="flex items-center gap-1 text-xs shrink-0">
-                        <button onclick="changeCartQty('${item.id}', -1)" class="w-6 h-6 rounded-xl border border-slate-600 hover:bg-slate-700 active:scale-90">-</button>
-                        <div class="w-6 text-center tabular-nums font-medium">${item.qty}</div>
-                        <button onclick="changeCartQty('${item.id}', 1)" class="w-6 h-6 rounded-xl border border-slate-600 hover:bg-slate-700 active:scale-90">+</button>
-                    </div>
-                    <div class="text-right shrink-0 w-20">
-                        <div class="font-semibold tabular-nums">${(item.price_sat * item.qty).toLocaleString()}</div>
-                        <div class="text-[10px] text-slate-400 -mt-px">sats</div>
-                    </div>
-                    <button onclick="removeFromCart('${item.id}')" class="text-red-400/70 hover:text-red-400 px-1"><i class="fas fa-times"></i></button>
-                </div>
-            `).join("");
+            const html = cart.map(cartItemHtml).join("");
+            if (container) container.innerHTML = html;
+            if (mobileContainer) mobileContainer.innerHTML = html;
 
             const total = getCartTotal();
-            totalSatsEl.textContent = total.toLocaleString();
-            totalBtcEl.textContent = formatBtcFromSat(total);
-            btn.disabled = false;
+            const totalStr = total.toLocaleString();
+            if (totalSatsEl) totalSatsEl.textContent = totalStr;
+            if (totalBtcEl) totalBtcEl.textContent = formatBtcFromSat(total);
+            if (mobileTotalEl) mobileTotalEl.textContent = totalStr;
+            if (btn) btn.disabled = false;
+            if (mobileBtn) mobileBtn.disabled = false;
+            if (walletLoaded) dock?.classList.add("visible");
         }
 
         function resetCheckoutInvoiceUI() {
@@ -1223,9 +1517,9 @@
             // Populate checkout UI
             const itemsEl = document.getElementById("checkout-items");
             itemsEl.innerHTML = cart.map(item => `
-                <div class="flex justify-between bg-slate-800 rounded-2xl px-3 py-2">
-                    <div>${item.qty} × ${item.name}</div>
-                    <div class="tabular-nums font-medium">${(item.price_sat * item.qty).toLocaleString()} sats</div>
+                <div class="flex justify-between surface-inset px-3 py-2.5 rounded-xl">
+                    <div class="text-sm">${item.qty} × ${item.name}</div>
+                    <div class="tabular-nums font-semibold text-sm">${(item.price_sat * item.qty).toLocaleString()} sats</div>
                 </div>
             `).join("");
 
@@ -1291,6 +1585,8 @@
             const co = document.getElementById("checkout-section");
             co.classList.remove("hidden");
             co.scrollIntoView({ behavior: "smooth", block: "start" });
+            syncStepProgress();
+            document.getElementById("mobile-cart-dock")?.classList.remove("visible");
 
             document.getElementById("pay-error").classList.add("hidden");
             document.getElementById("btn-pay").disabled = false;
@@ -1322,13 +1618,16 @@
         function cancelCheckout() {
             document.getElementById("checkout-section").classList.add("hidden");
             clearCurrentInvoice();
-            // Clear fee estimate
             const feeSatsEl = document.getElementById("checkout-fee-sats");
             const feeBtcEl = document.getElementById("checkout-fee-btc");
             if (feeSatsEl) feeSatsEl.textContent = "";
             if (feeBtcEl) feeBtcEl.textContent = "";
 
             applyCheckoutPaymentUI();
+            syncStepProgress();
+            if (cart.length && walletLoaded) {
+                document.getElementById("mobile-cart-dock")?.classList.add("visible");
+            }
         }
 
         async function payForOrder() {
@@ -1421,6 +1720,8 @@
         function showJourney(tx) {
             const section = document.getElementById("journey-section");
             section.classList.remove("hidden");
+            syncStepProgress();
+            document.getElementById("mobile-cart-dock")?.classList.remove("visible");
 
             // Order summary line
             const orderLine = document.getElementById("journey-order-summary");
@@ -1548,6 +1849,7 @@
             }
             // keep cart empty or user can start fresh
             document.getElementById("shop-section").scrollIntoView({ behavior: "smooth" });
+            syncStepProgress();
         }
 
         function showWalletModal() {
@@ -1587,12 +1889,19 @@
             document.getElementById("wallet-loaded-banner").classList.add("hidden");
             document.getElementById("wallet-descriptors-panel")?.classList.add("hidden");
             document.getElementById("wallet-descriptors-body")?.classList.add("hidden");
-            document.getElementById("descriptor-panel-chevron")?.classList.remove("rotate-180");
+            document.getElementById("descriptor-panel-chevron")?.classList.remove("open");
             document.getElementById("wallet-labels-panel")?.classList.add("hidden");
             document.getElementById("wallet-labels-body")?.classList.add("hidden");
-            document.getElementById("labels-panel-chevron")?.classList.remove("rotate-180");
+            document.getElementById("labels-panel-chevron")?.classList.remove("open");
             labelsPanelOpen = false;
+            document.getElementById("mobile-cart-dock")?.classList.remove("visible");
+            syncStepProgress();
             document.getElementById("wallet-pill").style.display = "none";
+            const pillMobile = document.getElementById("wallet-pill-mobile");
+            if (pillMobile) {
+                pillMobile.classList.add("hidden");
+                pillMobile.classList.remove("flex");
+            }
             document.getElementById("shop-balance-pill").style.display = "none";
             switchWalletImportTab("wif");
             const xpubInput = document.getElementById("xpub-input");
@@ -1601,9 +1910,7 @@
             const warnText = document.getElementById("checkout-broadcast-warning-text");
             if (warnText) warnText.textContent = "This will create and broadcast a real transaction on Bitcoin testnet.";
 
-            document.getElementById("cart-items").innerHTML = "";
-            document.getElementById("cart-total-sats").textContent = "0";
-            document.getElementById("cart-total-btc").textContent = "0.00000000 tBTC";
+            renderCart();
 
             // Re-render products (buttons will be inert until reload)
             renderProducts();
@@ -2364,7 +2671,7 @@
             if (!body) return;
             labelsPanelOpen = !labelsPanelOpen;
             body.classList.toggle("hidden", !labelsPanelOpen);
-            chevron?.classList.toggle("rotate-180", labelsPanelOpen);
+            chevron?.classList.toggle("open", labelsPanelOpen);
         }
 
         function updateLabelsUI() {
@@ -2463,7 +2770,7 @@
             if (!body) return;
             descriptorsPanelOpen = !descriptorsPanelOpen;
             body.classList.toggle("hidden", !descriptorsPanelOpen);
-            chevron?.classList.toggle("rotate-180", descriptorsPanelOpen);
+            chevron?.classList.toggle("open", descriptorsPanelOpen);
         }
 
         function updateDescriptorUI() {
@@ -2547,9 +2854,7 @@
 
         function initProductsAndCart() {
             renderProducts();
-            // initial empty cart render
-            document.getElementById("cart-items").innerHTML = `<div class="text-sm text-slate-500 py-6 text-center border border-dashed border-slate-700 rounded-2xl">Cart is empty.<br>Add some snacks above.</div>`;
-            document.getElementById("btn-checkout").disabled = true;
+            renderCart();
         }
 
         function init() {
